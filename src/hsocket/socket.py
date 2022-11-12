@@ -7,7 +7,7 @@ from .message import Header, Message, MessageConfig
 
 class SocketConfig:
     BUFFER_SIZE = 1024
-    DEFAULT_DOWNLOAD_PATH = "download/"
+    DEFAULT_DOWNLOAD_PATH = "downloads/"
 
 
 class HSocketTcp(socket.socket):
@@ -66,7 +66,9 @@ class HSocketTcp(socket.socket):
         self.setblocking(isblocking)
         return False
 
-    def recvFile(self) -> str:
+    def recvFile(self, download_dir=None) -> str:
+        if download_dir is None:
+            download_dir = SocketConfig.DEFAULT_DOWNLOAD_PATH
         isblocking = self.getblocking()
         self.setblocking(True)  # 避免收不到file_header_msg
         file_header_msg = self.recvMsg()
@@ -74,9 +76,9 @@ class HSocketTcp(socket.socket):
             filename = file_header_msg.get("filename")
             filesize = file_header_msg.get("size")
             if filename and filesize > 0:
-                if not os.path.exists(SocketConfig.DEFAULT_DOWNLOAD_PATH):
-                    os.path.makedirs(SocketConfig.DEFAULT_DOWNLOAD_PATH)
-                down_path = os.path.join(SocketConfig.DEFAULT_DOWNLOAD_PATH, filename)
+                if not os.path.exists(download_dir):
+                    os.makedirs(download_dir)
+                down_path = os.path.join(download_dir, filename)
                 received_size = 0
                 with open(down_path, 'wb') as fp:
                     # TODO 异常处理
@@ -104,14 +106,14 @@ class HSocketTcp(socket.socket):
             return countSuccess
         return 0
 
-    def recvFiles(self) -> Tuple[List[str], int]:
+    def recvFiles(self, download_dir=None) -> Tuple[List[str], int]:
         files_header_msg = self.recvMsg()
         if not files_header_msg.isValid():
             return [], 0
         fileAmount = files_header_msg.get("count")
         filepaths = []
         for i in range(fileAmount):
-            filepath = self.recvFile()
+            filepath = self.recvFile(download_dir)
             if filepath:
                 filepaths.append(filepath)
         return filepaths, fileAmount
