@@ -13,7 +13,8 @@ class HServerSelector:
         self.msgs: Dict["HSocketTcp", "Message"] = {}
 
     def start(self, addr, backlog=10):
-        self.server_socket = ServerTcpSocket(addr)
+        self.server_socket = HSocketTcp()
+        self.server_socket.bind(addr)
         self.server_socket.setblocking(False)
         self.server_socket.listen(backlog)
 
@@ -90,7 +91,8 @@ class HUdpServer:
         self.__udp_socket: "HSocketUdp" = None
 
     def start(self, addr):
-        self.__udp_socket = ServerUdpSocket(addr)
+        self.__udp_socket = HSocketUdp()
+        self.__udp_socket.bind(addr)
         while True:
             if self.__udp_socket.fileno == -1:
                 break

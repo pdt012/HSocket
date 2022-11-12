@@ -1,23 +1,36 @@
 # -*- coding: utf-8 -*-
-from typing import Optional
+import socket
 import threading
-from .socket import HSocketTcp, HSocketUdp, ClientTcpSocket, ClientUdpSocket
+from .socket import HSocketTcp, HSocketUdp
 from .message import Header, Message
+
 
 class HTcpP2PClient:
     def __init__(self):
-        self.__tcp_socket: "HSocketTcp" = ClientTcpSocket()
-        self.__tcp_socket.setblocking(True)
+        self.__tcp_socket: "HSocketTcp" = None
         self.__message_thread = threading.Thread(target=self.__recv_handle, daemon=True)
 
     def _socket(self) -> "HSocketTcp":
         return self.__tcp_socket
 
-    def settimeout(self, timeout):
-        self.__tcp_socket.settimeout(timeout)
+    def bind(self, addr):
+        self.__tcp_socket = HSocketTcp()
+        self.__tcp_socket.setblocking(True)
+        self.__tcp_socket.bind(addr)
+        self.__tcp_socket.listen(1)
+
+    def wait(self):
+        conn, addr = self.__tcp_socket.accept()
+        print("connected: {}".format(addr))
+        conn.setblocking(True)
+        self.__tcp_socket = conn
+        self.__message_thread.start()
 
     def connect(self, addr):
+        self.__tcp_socket = HSocketTcp()
+        self.__tcp_socket.setblocking(True)
         self.__tcp_socket.connect(addr)
+        print("connected: {}".format(addr))
         self.__message_thread.start()
 
     def close(self):
@@ -25,6 +38,12 @@ class HTcpP2PClient:
 
     def isclosed(self) -> bool:
         return self.__tcp_socket.fileno() == -1
+
+    def getsockaddr(self):
+        return self.__tcp_socket.getsockname()
+
+    def getpeeraddr(self):
+        return self.__tcp_socket.getpeername()
 
     def send(self, msg: "Message") -> bool:
         try:
@@ -58,16 +77,16 @@ class HTcpP2PClient:
         pass
 
 
-class HUdpP2PClient:
+class HUdpP2PClient():
     def __init__(self):
-        self.__udp_socket: "HSocketUdp" = ClientUdpSocket()
+        self.__udp_socket: "HSocketUdp" = HSocketUdp()
         self.__udp_socket.setblocking(True)
-        self.peer_addr = None
+        self._peer_addr = None
         self.__running = False
         self.__message_thread = threading.Thread(target=self.__recv_handle, daemon=True)
 
-    def settimeout(self, timeout):
-        self.__udp_socket.settimeout(timeout)
+    def _socket(self) -> "HSocketUdp":
+        return self.__udp_socket
 
     def close(self):
         self.__running = False
@@ -84,17 +103,23 @@ class HUdpP2PClient:
         else:
             raise RuntimeError("Already started.")
 
+    def getsockaddr(self):
+        return self.__udp_socket.getsockname()
+
     def setpeeraddr(self, peer_addr):
-        self.peer_addr = peer_addr
+        self._peer_addr = peer_addr
+
+    def getpeeraddr(self):
+        return self._peer_addr
 
     def send(self, msg: "Message") -> bool:
-        return self.__udp_socket.sendMsg(msg, self.peer_addr)
+        return self.__udp_socket.sendMsg(msg, self._peer_addr)
 
     def __recv_handle(self):
         while self.__running:
             try:
                 msg, addr = self.__udp_socket.recvMsg()
-                if (addr != self.peer_addr):
+                if (addr != self._peer_addr):
                     continue
             except TimeoutError:
                 continue

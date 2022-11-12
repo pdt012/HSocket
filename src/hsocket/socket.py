@@ -134,27 +134,3 @@ class HSocketUdp(socket.socket):
             return Message.from_bytes(data), from_
         else:
             return None, None
-
-
-def ServerTcpSocket(address) -> HSocketTcp:
-    socket_ = HSocketTcp()
-    socket_.bind(address)
-    return socket_
-
-
-def ClientTcpSocket() -> HSocketTcp:
-    socket_ = HSocketTcp()
-    return socket_
-
-
-def ServerUdpSocket(address) -> HSocketUdp:
-    socket_ = HSocketUdp()
-    socket_.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    socket_.bind(address)
-    return socket_
-
-
-def ClientUdpSocket() -> HSocketUdp:
-    socket_ = HSocketUdp()
-    socket_.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    return socket_

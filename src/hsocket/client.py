@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from typing import Optional
 import threading
+import socket
 from enum import Enum, auto
-from .socket import HSocketTcp, HSocketUdp, ClientTcpSocket, ClientUdpSocket
+from .socket import HSocketTcp, HSocketUdp
 from .message import Header, Message
 
 
@@ -12,8 +13,8 @@ class ClientMode(Enum):
 
 
 class HTcpClient:
-    def __init__(self,  mode: ClientMode = ClientMode.SYNCHRONOUS):
-        self.__tcp_socket: "HSocketTcp" = ClientTcpSocket()
+    def __init__(self, mode: ClientMode = ClientMode.SYNCHRONOUS):
+        self.__tcp_socket: "HSocketTcp" = HSocketTcp()
         self.__tcp_socket.setblocking(True)
         self.__mode = mode
         if self.__mode is ClientMode.ASYNCHRONOUS:
@@ -88,13 +89,16 @@ class HTcpClient:
 
 class HUdpClient:
     def __init__(self, addr, mode: ClientMode = ClientMode.SYNCHRONOUS):
-        self.__udp_socket: "HSocketUdp" = ClientUdpSocket()
+        self.__udp_socket: "HSocketUdp" = HSocketUdp()
         self.__udp_socket.setblocking(True)
         self.__mode = mode
-        self.server_addr = addr
+        self._peer_addr = addr
         if self.__mode is ClientMode.ASYNCHRONOUS:
             self.__running = False
             self.__message_thread = threading.Thread(target=self.__recv_handle, daemon=True)
+
+    def _socket(self) -> "HSocketUdp":
+        return self.__udp_socket
 
     def settimeout(self, timeout):
         self.__udp_socket.settimeout(timeout)
@@ -108,7 +112,7 @@ class HUdpClient:
         return self.__udp_socket.fileno() == -1
 
     def send(self, msg: "Message") -> bool:
-        ret = self.__udp_socket.sendMsg(msg, self.server_addr)
+        ret = self.__udp_socket.sendMsg(msg, self._peer_addr)
         # recvMsg before sendMsg will cause WinError10022.
         # So start the message thread after the first call of send.
         if self.__mode is ClientMode.ASYNCHRONOUS and not self.__running:
@@ -120,7 +124,7 @@ class HUdpClient:
         if self.__mode is ClientMode.ASYNCHRONOUS:
             raise RuntimeError("'request' is not available in ASYNCHRONOUS mode. Please use 'send' instead")
         try:
-            self.__udp_socket.sendMsg(msg, self.server_addr)
+            self.__udp_socket.sendMsg(msg, self._peer_addr)
             response, addr = self.__udp_socket.recvMsg()
         except TimeoutError:
             return None
@@ -131,8 +135,6 @@ class HUdpClient:
         while self.__running:
             try:
                 msg, addr = self.__udp_socket.recvMsg()
-                # if (addr != self.server_addr):
-                #     continue
             except TimeoutError:
                 continue
             else:
