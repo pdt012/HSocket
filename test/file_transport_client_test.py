@@ -9,12 +9,44 @@ from traceback import print_exc
 class FileClientApp(HTcpClient):
     def __init__(self):
         super().__init__(ClientMode.SYNCHRONOUS)
+    
+    def _messageHandle(self, msg: "Message"):
+        print(msg)
 
     def _onDisconnected(self):
         return super()._onDisconnected()
 
 
-if __name__ == '__main__':
+ASYN = True
+if ASYN:
+    client = FileClientApp()
+    client.connect(("127.0.0.1", 40000))
+    print("start")
+    try:
+        while 1:
+            if client.isclosed():
+                print("client is closed")
+                break
+            code = input(">>>")
+            if code.isdigit():
+                code = int(code)
+                match code:
+                    case 0:
+                        client.send(Message.JsonMsg(code, 0, text="test message send by client"))
+                    case 101:  # get file
+                        client.send(Message.HeaderOnlyMsg(code))
+                        client.recvFile("downloads/")
+                    case 102:  # put file
+                        client.send(Message.HeaderOnlyMsg(code))
+                        client.sendFile("files/test1.txt", "test1-from-client.txt")
+                    case _:
+                        pass
+            else:
+                break
+    except Exception as e:
+        print(print_exc())
+    input("press enter to exit")
+else: 
     client = FileClientApp()
     client.connect(("127.0.0.1", 40000))
     print("start")
@@ -41,4 +73,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(print_exc())
     input("press enter to exit")
-

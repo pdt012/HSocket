@@ -15,9 +15,9 @@ class FileServerApp(HTcpServer):
                 print(addr, text)
                 conn.sendMsg(Message.JsonMsg(0, 1, text="hello"))
             case 101:  # get file
-                conn.sendFile("files/test1.txt", "test1-from-server.txt")
+                self.sendFile(conn, "files/test1.txt", "test1-from-server.txt")
             case 102:  # put file
-                conn.recvFile("downloads/")
+                self.recvFile(conn, "downloads/")
             case _:
                 pass
     def _onDisconnected(self, addr):

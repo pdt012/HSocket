@@ -78,6 +78,28 @@ class HTcpServer:
     def close(self):
         self.__selector.stop()
 
+    def sendFile(self, conn: "HSocketTcp", path: str, filename: str) -> bool:
+        filesock = HSocketTcp()
+        ip = self.__selector.server_socket.getsockname()[0]
+        filesock.bind((ip, 0))
+        filesock.listen(1)
+        file_socket_info_msg = Message.JsonMsg(0, 0, ip=ip, port=filesock.getsockname()[1])
+        conn.sendMsg(file_socket_info_msg)
+        fileconn, addr = filesock.accept()
+        if fileconn.sendFile(path, filename):
+            print("file sent: '{}'".format(filename))
+
+    def recvFile(self, conn: "HSocketTcp", download_dir=None) -> str:
+        filesock = HSocketTcp()
+        ip = self.__selector.server_socket.getsockname()[0]
+        filesock.bind((ip, 0))
+        filesock.listen(1)
+        file_socket_info_msg = Message.JsonMsg(0, 0, ip=ip, port=filesock.getsockname()[1])
+        conn.sendMsg(file_socket_info_msg)
+        fileconn, addr = filesock.accept()
+        downpath = fileconn.recvFile(download_dir)
+        print("file received: '{}'".format(downpath))
+
     @abstractmethod
     def _messageHandle(self, conn: "HSocketTcp", msg: "Message"):
         ...

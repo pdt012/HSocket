@@ -42,7 +42,7 @@ class HSocketTcp(socket.socket):
         else:
             return Message()
 
-    def sendFile(self, path: str, filename: str):
+    def sendFile(self, path: str, filename: str) -> bool:
         if not os.path.isfile(path):
             return False
         filesize = os.stat(path).st_size

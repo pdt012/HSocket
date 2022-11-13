@@ -66,6 +66,24 @@ class HTcpClient:
                 return response
         return None
 
+    def sendFile(self, path: str, filename: str) -> bool:
+        file_socket_info_msg = self.__tcp_socket.recvMsg()
+        ip = file_socket_info_msg.get("ip")
+        port = file_socket_info_msg.get("port")
+        filesock = HSocketTcp()
+        filesock.connect((ip, port))
+        if filesock.sendFile():
+            print("file sent: '{}'".format(filename))
+
+    def recvFile(self, download_dir=None) -> str:
+        file_socket_info_msg = self.__tcp_socket.recvMsg()
+        ip = file_socket_info_msg.get("ip")
+        port = file_socket_info_msg.get("port")
+        filesock = HSocketTcp()
+        filesock.connect((ip, port))
+        downpath = filesock.recvFile(download_dir)
+        print("file received: '{}'".format(downpath))
+
     def __recv_handle(self):
         while not self.isclosed():
             try:
