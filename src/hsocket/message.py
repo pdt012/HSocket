@@ -9,10 +9,6 @@ class ContentType:
     HEADERONLY = 0x2  # 只含报头
     PLAINTEXT = 0x3  # 纯文本内容
     JSONOBJRCT = 0x4  # JSON对象
-    FILE_PORT = 0x10
-    FILE_PASV = 0x11
-    FILE_START = 0X12
-    FILE_END = 0X13
 
 
 class MessageConfig:
@@ -60,7 +56,7 @@ class Message:
                 pass
             elif contenttype == ContentType.PLAINTEXT:
                 self.__content = content
-            else:
+            elif contenttype == ContentType.JSONOBJRCT:
                 self.__content = content
                 try:
                     self.__json = json.loads(content)
@@ -123,6 +119,8 @@ class Message:
             content = b""
         elif self.__contenttype == ContentType.PLAINTEXT:
             content = self.__content.encode(MessageConfig.ENCODING)
+        elif self.__contenttype == ContentType.JSONOBJRCT:
+            content = json.dumps(self.__json).encode(MessageConfig.ENCODING)
         else:
             content = json.dumps(self.__json).encode(MessageConfig.ENCODING)
         length = len(content)  # 数据包长度(不包含报头)

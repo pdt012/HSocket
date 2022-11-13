@@ -5,6 +5,10 @@ import os
 from .message import Header, Message, MessageConfig
 
 
+FTP_PORT = 1
+FTP_PASV = 2
+
+
 class SocketConfig:
     BUFFER_SIZE = 1024
     DEFAULT_DOWNLOAD_PATH = "downloads/"
@@ -62,6 +66,7 @@ class HSocketTcp(socket.socket):
                 received_filesize = file_ending_msg.get("size")
                 if filename == received_filename and filesize == received_filesize:
                     self.setblocking(isblocking)
+                    print("file sent: '{}'".format(filename))
                     return True
         self.setblocking(isblocking)
         return False
@@ -90,6 +95,7 @@ class HSocketTcp(socket.socket):
                 file_ending_msg = Message.JsonMsg(1002, 0, {"filename": filename, "size": received_size})
                 if self.sendMsg(file_ending_msg):
                     self.setblocking(isblocking)
+                    print("file received: '{}'".format(down_path))
                     return down_path
         self.setblocking(isblocking)
         return ""
@@ -117,6 +123,32 @@ class HSocketTcp(socket.socket):
             if filepath:
                 filepaths.append(filepath)
         return filepaths, fileAmount
+
+    def createFileTranCon(self, ftpmode: int, port=0) -> "HSocketTcp":
+        """Create a new socket for file transporting.
+
+            :param ftpmode: PORT / PASV (just like FTP) 
+            :param port: Only valiable in PORT mode. Provide port of file-transport-socket.
+            :return: A new socket for file transporting.
+        """
+        if ftpmode == FTP_PORT:
+            filesock = HSocketTcp()
+            ip = self.getsockname()[0]
+            filesock.bind((ip, port))
+            filesock.listen(1)
+            file_port_msg = Message.JsonMsg(0, 0, ip=ip, port=filesock.getsockname()[1])
+            self.sendMsg(file_port_msg)
+            transport_conn, addr = filesock.accept()
+            return transport_conn
+        elif ftpmode == FTP_PASV:
+            file_port_msg = self.recvMsg()
+            ip = file_port_msg.get("ip")
+            port = file_port_msg.get("port")
+            transport_sock = HSocketTcp()
+            transport_sock.connect((ip, port))
+            return transport_sock
+        else:
+            raise ValueError(f"invaliable ftpmode value '{ftpmode}'")
 
 
 class HSocketUdp(socket.socket):

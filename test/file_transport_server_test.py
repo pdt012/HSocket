@@ -2,7 +2,7 @@
 import sys
 sys.path.append("..")
 from src.hsocket.server import HTcpServer
-from src.hsocket.socket import HSocketTcp, Message
+from src.hsocket.socket import FTP_PORT, HSocketTcp, Message
 from traceback import print_exc
 
 
@@ -15,9 +15,18 @@ class FileServerApp(HTcpServer):
                 print(addr, text)
                 conn.sendMsg(Message.JsonMsg(0, 1, text="hello"))
             case 101:  # get file
-                self.sendFile(conn, "files/test1.txt", "test1-from-server.txt")
+                filesock = conn.createFileTranCon(FTP_PORT)
+                filesock.sendFile("files/test1.txt", "test1-from-server.txt")
             case 102:  # put file
-                self.recvFile(conn, "downloads/")
+                filesock = conn.createFileTranCon(FTP_PORT)
+                filesock.recvFile("downloads/")
+            case 201:  # get files
+                filesock = conn.createFileTranCon(FTP_PORT)
+                filesock.sendFiles(["files/test1.txt", "files/test2.txt"], 
+                        ["test1-from-server.txt", "test2-from-server.txt"])
+            case 202:  # put files
+                filesock = conn.createFileTranCon(FTP_PORT)
+                filesock.recvFiles("downloads/")
             case _:
                 pass
     def _onDisconnected(self, addr):
