@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.append("..")
-from src.server import HUdpServer
-from src.socket import HUdpSocket, Message
+from src.hsocket.server import HUdpServer
+from src.hsocket.socket import HUdpSocket, Message
 from traceback import print_exc
 
 

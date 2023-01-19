@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.append("..")
-from src.p2pclient import HTcpP2PClient
-from src.socket import Message
+from src.hsocket.p2pclient import HTcpP2PClient
+from src.hsocket.socket import Message
 from traceback import print_exc
 
 

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.append("..")
-from src.client import HTcpClient, ClientMode
-from src.socket import Message
+from src.hsocket.client import HTcpClient, ClientMode
+from src.hsocket.socket import Message
 from traceback import print_exc
 
 
