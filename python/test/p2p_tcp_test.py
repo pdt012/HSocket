@@ -2,7 +2,7 @@
 import sys
 sys.path.append("..")
 from src.hsocket.p2pclient import HTcpP2PClient
-from src.hsocket.socket import Message
+from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 

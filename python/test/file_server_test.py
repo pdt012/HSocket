@@ -2,8 +2,8 @@
 import sys
 
 sys.path.append("..")
-from src.hsocket.server import HTcpServer
-from src.hsocket.socket import HTcpSocket, Message
+from src.hsocket.hserver import HTcpServer
+from src.hsocket.hsocket import HTcpSocket, Message
 from traceback import print_exc
 
 
