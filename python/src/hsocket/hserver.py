@@ -47,6 +47,11 @@ class HServerSelector:
         self.onConnected(conn, addr)
 
     def callback_read(self, conn: "HTcpSocket"):
+        if not conn.isValid():
+            print("not a socket")
+            self.selector.unregister(conn)
+            del self.msgs[conn]
+            return 
         addr = conn.getpeername()
         try:
             msg = conn.recvMsg()  # receive msg

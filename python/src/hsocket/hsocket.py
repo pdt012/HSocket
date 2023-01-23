@@ -13,6 +13,9 @@ class SocketConfig:
 class HTcpSocket(socket.socket):
     def __init__(self, family=socket.AF_INET, type_=socket.SOCK_STREAM, proto=-1, fileno=None):
         super().__init__(family, type_, proto, fileno)
+
+    def isValid(self) -> bool:
+        return self.fileno != -1
     
     def accept(self) -> Tuple["HTcpSocket", Tuple[str, int]]:
         fd, addr = self._accept()
@@ -118,6 +121,9 @@ class HTcpSocket(socket.socket):
 class HUdpSocket(socket.socket):
     def __init__(self):
         super().__init__(socket.AF_INET, socket.SOCK_DGRAM)
+
+    def isValid(self) -> bool:
+        return self.fileno != -1
 
     def sendMsg(self, msg: "Message", address: Tuple[str, int]) -> bool:
         data = msg.to_bytes()
