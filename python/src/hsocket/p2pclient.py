@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import socket
 import threading
-from .socket import HTcpSocket, HUdpSocket
+from .hsocket import HTcpSocket, HUdpSocket
 from .message import Header, Message
 
 

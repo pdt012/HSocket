@@ -2,7 +2,7 @@
 import selectors
 from typing import Callable
 from abc import abstractmethod
-from .socket import *
+from .hsocket import *
 
 
 class HServerSelector:

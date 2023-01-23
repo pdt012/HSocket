@@ -3,7 +3,7 @@ from typing import Optional
 import threading
 import socket
 from enum import Enum, auto
-from .socket import HTcpSocket, HUdpSocket
+from .hsocket import HTcpSocket, HUdpSocket
 from .message import Header, Message
 
 
