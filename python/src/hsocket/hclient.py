@@ -65,6 +65,24 @@ class HTcpClient:
             else:
                 return response
         return None
+    
+    def sendfile(self, path: str, filename: str, ftpaddr: tuple):
+        with HTcpSocket() as ftp_socket:
+            ftp_socket.connect(ftpaddr)
+            with open(path, 'rb') as fin:
+                ftp_socket.sendFile(fin, filename)
+    
+    def recvfile(self, ftpaddr: tuple):
+        with HTcpSocket() as ftp_socket:
+            ftp_socket.connect(ftpaddr)
+            down_path = ftp_socket.recvFile()
+        return down_path
+
+    def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
+        ...
+
+    def recvfiles(self) -> list[str]:
+        ...
 
     def __recv_handle(self):
         while not self.isclosed():

@@ -81,9 +81,13 @@ class HServerSelector:
 
 class HTcpServer:
     def __init__(self):
+        self.__addr: tuple = None
+        self.__ftpaddr: tuple = None
         self.__selector = HServerSelector(self._messageHandle, self._onConnected, self._onDisconnected)
 
-    def start(self, addr):
+    def start(self, addr, ftpport=0):
+        self.__addr = addr
+        self.__ftpaddr = (addr[0], ftpport)
         self.__selector.start(addr)
 
     def close(self):
@@ -92,37 +96,29 @@ class HTcpServer:
     def remove(self, conn: "HTcpSocket"):
         self.__selector.remove(conn)
 
-    @staticmethod
-    def sendFile(self, conn: "HTcpSocket", path: str, filename: str) -> bool:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.sendFile(path, filename)
-        conn.setblocking(isblocking)
-        return ret
+    def sendfile(self, path: str, filename: str):
+        with HTcpSocket() as ftp_socket:
+            ftp_socket.bind(self.__ftpaddr)
+            ftp_socket.listen(1)
+            c_socket, c_addr = ftp_socket.accept()
+            with open(path, 'rb') as fin:
+                c_socket.sendFile(fin, filename)
+            c_socket.close()
+    
+    def recvfile(self):
+        with HTcpSocket() as ftp_socket:
+            ftp_socket.bind(self.__ftpaddr)
+            ftp_socket.listen(1)
+            c_socket, c_addr = ftp_socket.accept()
+            down_path = c_socket.recvFile()
+            c_socket.close()
+        return down_path
 
-    @staticmethod
-    def recvFile(self, conn: "HTcpSocket") -> str:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.recvFile()
-        conn.setblocking(isblocking)
-        return ret
+    def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
+        ...
 
-    @staticmethod
-    def sendFiles(self, conn: "HTcpSocket", paths: List[str], filenames: List[str]) -> int:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.sendFiles(paths, filenames)
-        conn.setblocking(isblocking)
-        return ret
-
-    @staticmethod
-    def recvFiles(self, conn: "HTcpSocket") -> Tuple[List[str], int]:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.recvFiles()
-        conn.setblocking(isblocking)
-        return ret
+    def recvfiles(self) -> list[str]:
+        ...
 
     @abstractmethod
     def _messageHandle(self, conn: "HTcpSocket", msg: "Message"):
