@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-from typing import Tuple, Optional, Union, List, Dict, Any
+from typing import Tuple, Optional, Union, List, Dict, Any, BinaryIO
 import socket
 import os
 from .message import Header, Message, MessageConfig
@@ -8,11 +8,13 @@ from .message import Header, Message, MessageConfig
 class SocketConfig:
     BUFFER_SIZE = 1024
     DEFAULT_DOWNLOAD_PATH = "download/"
+    FILENAME_ENCODING = "utf-8"
 
 
 class HTcpSocket(socket.socket):
     def __init__(self, family=socket.AF_INET, type_=socket.SOCK_STREAM, proto=-1, fileno=None):
         super().__init__(family, type_, proto, fileno)
+        self.sendfile
 
     def isValid(self) -> bool:
         return self.fileno != -1
@@ -45,77 +47,50 @@ class HTcpSocket(socket.socket):
         else:
             return Message()
 
-    def sendFile(self, path: str, filename: str) -> bool:
-        if not os.path.isfile(path):
-            return False
-        filesize = os.stat(path).st_size
-        file_header_msg = Message.JsonMsg(1001, 0, {"filename": filename, "size": filesize})
-        if self.sendMsg(file_header_msg):
-            with open(path, 'rb') as fp:
-                while True:
-                    data = fp.read(2048)
-                    if not data:
-                        break
-                    self.sendall(data)
-            # file_ending_msg = self.recvMsg()
-            # if file_ending_msg.isValid():
-            #     received_filename = file_ending_msg.get("filename")
-            #     received_filesize = file_ending_msg.get("size")
-            #     if filename == received_filename and filesize == received_filesize:
-            #         return True
-            return True
-        return False
+    def sendFile(self, file: BinaryIO, filename: str):
+        # get file size
+        file.seek(0, os.SEEK_END)
+        filesize = file.tell()
+        file.seek(0, os.SEEK_SET)
+        # file header
+        self.sendall(filename.encode(SocketConfig.FILENAME_ENCODING))  # filename
+        self.sendall(b'\0')  # name end
+        self.sendall(filesize.to_bytes(4, 'little', signed=False))  # filesize
+        # file content
+        while True:
+            data = file.read(2048)
+            if not data:
+                break
+            self.sendall(data)
 
     def recvFile(self) -> str:
-        isblocking = self.getblocking()
-        self.setblocking(True)  # 避免收不到file_header_msg
-        file_header_msg = self.recvMsg()
-        if file_header_msg.isValid():
-            filename = file_header_msg.get("filename")
-            filesize = file_header_msg.get("size")
-            if filename and filesize > 0:
-                if not os.path.exists(SocketConfig.DEFAULT_DOWNLOAD_PATH):
-                    os.makedirs(SocketConfig.DEFAULT_DOWNLOAD_PATH)
-                down_path = os.path.join(SocketConfig.DEFAULT_DOWNLOAD_PATH, filename)
-                received_size = 0
-                with open(down_path, 'wb') as fp:
-                    # TODO 异常处理
-                    while received_size < filesize:
-                        recv_size = min(filesize - received_size, SocketConfig.BUFFER_SIZE)
-                        data = self.recv(recv_size)
-                        fp.write(data)
-                        received_size += len(data)
-                # file_ending_msg = Message.JsonMsg(1002, 0, {"filename": filename, "size": received_size})
-                # if self.sendMsg(file_ending_msg):
-                #     return down_path
-                self.setblocking(isblocking)
-                return down_path
-        self.setblocking(isblocking)
-        return ""
-
-    def sendFiles(self, paths: List[str], filenames: List[str]) -> int:
-        if len(paths) != len(filenames):
-            return 0
-        files_header_msg = Message.JsonMsg(1011, 0, {"count": len(paths)})
-        if self.sendMsg(files_header_msg):
-            countSuccess = 0
-            for i in range(len(paths)):
-                if self.sendFile(paths[i], filenames[i]):
-                    countSuccess += 1
-            return countSuccess
-        return 0
-
-    def recvFiles(self) -> Tuple[List[str], int]:
-        files_header_msg = self.recvMsg()
-        if not files_header_msg.isValid():
-            return [], 0
-        fileAmount = files_header_msg.get("count")
-        filepaths = []
-        for i in range(fileAmount):
-            filepath = self.recvFile()
-            if filepath:
-                filepaths.append(filepath)
-        return filepaths, fileAmount
+        filename_b: bytes = b""
+        # filename
+        while True:
+            char = self.recv(1)
+            if char != b'\0':
+                filename_b += char
+            else:
+                break
+        filename = filename_b.decode(SocketConfig.FILENAME_ENCODING)
+        # filesize
+        filesize_b = self.recv(4)
+        filesize = int.from_bytes(filesize_b, 'little', signed=False)
+        # file content
+        if filename and filesize > 0:
+            if not os.path.exists(SocketConfig.DEFAULT_DOWNLOAD_PATH):
+                os.makedirs(SocketConfig.DEFAULT_DOWNLOAD_PATH)
+            down_path = os.path.join(SocketConfig.DEFAULT_DOWNLOAD_PATH, filename)
+            received_size = 0
+            with open(down_path, 'wb') as fp:
+                while received_size < filesize:
+                    recv_size = min(filesize - received_size, SocketConfig.BUFFER_SIZE)
+                    data = self.recv(recv_size)
+                    fp.write(data)
+                    received_size += len(data)
+            return down_path
+        else:
+            return ""
 
 
 class HUdpSocket(socket.socket):
