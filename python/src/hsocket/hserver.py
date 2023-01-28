@@ -12,7 +12,7 @@ class HServerSelector:
         self.onDisconnected = onDisconnected
         self.onConnected = onConnected
         self.server_socket: "HTcpSocket" = None
-        self.msgs: Dict["HTcpSocket", "Message"] = {}
+        self.msgs: dict["HTcpSocket", "Message"] = {}
 
     def start(self, addr, backlog=10):
         self.server_socket = HTcpSocket()

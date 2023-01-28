@@ -43,7 +43,7 @@ class HTcpClient:
 
     def send(self, msg: "Message") -> bool:
         try:
-            return self.__tcp_socket.sendMsg(msg)
+            self.__tcp_socket.sendMsg(msg)
         except ConnectionResetError:
             if self.__mode is ClientMode.ASYNCHRONOUS:
                 self.__message_thread.join()  # make sure that '_onDisconnected' only runs once
@@ -52,6 +52,7 @@ class HTcpClient:
                 self._onDisconnected()
                 self.close()
             return False
+        return True
 
     def request(self, msg: "Message") -> Optional["Message"]:
         if self.__mode is ClientMode.ASYNCHRONOUS:
