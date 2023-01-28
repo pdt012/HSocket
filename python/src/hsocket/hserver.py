@@ -98,31 +98,75 @@ class HTcpServer:
 
     def sendfile(self, conn: HTcpSocket, path: str, filename: str):
         with HTcpSocket() as ftp_socket:
+            # connect
             ftp_socket.bind((self.__ip, 0))
             port = ftp_socket.getsockname()[1]
             conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            ftp_socket.settimeout(15)
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()
+            # send
             with open(path, 'rb') as fin:
                 c_socket.sendFile(fin, filename)
             c_socket.close()
     
-    def recvfile(self, conn: HTcpSocket):
+    def recvfile(self, conn: HTcpSocket) -> str:
         with HTcpSocket() as ftp_socket:
+            # connect
             ftp_socket.bind((self.__ip, 0))
             port = ftp_socket.getsockname()[1]
             conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            ftp_socket.settimeout(15)
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()
+            # recv
             down_path = c_socket.recvFile()
             c_socket.close()
         return down_path
 
-    def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
-        ...
+    def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
+        if len(paths) != len(filenames):
+            return 0
+        count_sent = 0
+        with HTcpSocket() as ftp_socket:
+            # connect
+            ftp_socket.bind((self.__ip, 0))
+            port = ftp_socket.getsockname()[1]
+            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            ftp_socket.settimeout(15)
+            ftp_socket.listen(1)
+            c_socket, c_addr = ftp_socket.accept()
+            # send
+            files_header_msg = Message.JsonMsg(0, 0, {"file_count": len(paths)})
+            c_socket.sendMsg(files_header_msg)
+            for i in range(len(paths)):
+                path = paths[i]
+                filename = filenames[i]
+                with open(path, 'rb') as fin:
+                    c_socket.sendFile(fin, filename)
+                    count_sent += 1
+            c_socket.close()
+        return count_sent
 
-    def recvfiles(self) -> list[str]:
-        ...
+    def recvfiles(self, conn: HTcpSocket) -> list[str]:
+        down_path_list = []
+        with HTcpSocket() as ftp_socket:
+            # connect
+            ftp_socket.bind((self.__ip, 0))
+            port = ftp_socket.getsockname()[1]
+            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            ftp_socket.settimeout(15)
+            ftp_socket.listen(1)
+            c_socket, c_addr = ftp_socket.accept()
+            # recv
+            files_header_msg = c_socket.recvMsg()
+            file_count = files_header_msg.get("file_count")
+            for i in range(file_count):
+                path = c_socket.recvFile()
+                if path:
+                    down_path_list.append(path)
+            c_socket.close()
+        return down_path_list
 
     @abstractmethod
     def _messageHandle(self, conn: "HTcpSocket", msg: "Message"):

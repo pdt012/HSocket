@@ -28,16 +28,20 @@ if __name__ == '__main__':
                     case 100:  # 上传
                         client.send(Message.HeaderOnlyMsg(100))
                         client.sendfile("testfile/test1.txt", "test1_by_client.txt")
+                        print(f"send file")
                     case 101:  # 下载
                         client.send(Message.HeaderOnlyMsg(101))
-                        client.recvfile()
-                    # case 110:  # 上传
-                    #     client.send(Message.HeaderOnlyMsg(110))
-                    #     client.socket().sendFiles(["testfile/test1.txt", "testfile/test2.txt"],
-                    #                                ["test1_by_client.txt", "test2_by_client.txt"])
-                    # case 111:  # 下载
-                    #     client.send(Message.HeaderOnlyMsg(111))
-                    #     client.socket().recvFiles()
+                        path = client.recvfile()
+                        print(f"recv file '{path}'")
+                    case 110:  # 上传
+                        client.send(Message.HeaderOnlyMsg(110))
+                        count = client.sendfiles(["testfile/test1.txt", "testfile/test2.txt"],
+                                                 ["test1_by_client.txt", "test2_by_client.txt"])
+                        print(f"send files ({count})")
+                    case 111:  # 下载
+                        client.send(Message.HeaderOnlyMsg(111))
+                        paths = client.recvfiles()
+                        print(f"recv file {paths}")
                     case _:
                         pass
                 print(response)

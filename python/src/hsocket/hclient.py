@@ -73,34 +73,78 @@ class HTcpClient:
     def sendfile(self, path: str, filename: str):
         # get server's tranfer port
         if self.__mode is ClientMode.ASYNCHRONOUS:
-            self.__ftp_pacv_con.wait()  # wait for a FTP_TRANSFER_PORT reply
+            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
         else:
             msg = self.__tcp_socket.recvMsg()
             if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
                 self.__ftp_server_port = msg.statuscode()
+        # send
         with HTcpSocket() as ftp_socket:
             ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
             with open(path, 'rb') as fin:
                 ftp_socket.sendFile(fin, filename)
     
-    def recvfile(self):
+    def recvfile(self) -> str:
         # get server's tranfer port
         if self.__mode is ClientMode.ASYNCHRONOUS:
-            self.__ftp_pacv_con.wait()  # wait for a PACV reply
+            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
         else:
             msg = self.__tcp_socket.recvMsg()
             if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
                 self.__ftp_server_port = msg.statuscode()
+            else:
+                 return ""
+        # recv
         with HTcpSocket() as ftp_socket:
             ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
             down_path = ftp_socket.recvFile()
         return down_path
 
     def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
-        ...
+        if len(paths) != len(filenames):
+            return 0
+        # get server's tranfer port
+        if self.__mode is ClientMode.ASYNCHRONOUS:
+            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
+        else:
+            msg = self.__tcp_socket.recvMsg()
+            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+                self.__ftp_server_port = msg.statuscode()
+            else:
+                 return 0
+        # send
+        count_sent = 0
+        with HTcpSocket() as ftp_socket:
+            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
+            files_header_msg = Message.JsonMsg(0, 0, {"file_count": len(paths)})
+            ftp_socket.sendMsg(files_header_msg)
+            for i in range(len(paths)):
+                path = paths[i]
+                filename = filenames[i]
+                with open(path, 'rb') as fin:
+                    ftp_socket.sendFile(fin, filename)
+                    count_sent += 1
+        return count_sent
 
     def recvfiles(self) -> list[str]:
-        ...
+        # get server's tranfer port
+        if self.__mode is ClientMode.ASYNCHRONOUS:
+            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
+        else:
+            msg = self.__tcp_socket.recvMsg()
+            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+                self.__ftp_server_port = msg.statuscode()
+        # recv
+        down_path_list = []
+        with HTcpSocket() as ftp_socket:
+            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
+            files_header_msg = ftp_socket.recvMsg()
+            file_count = files_header_msg.get("file_count")
+            for i in range(file_count):
+                path = ftp_socket.recvFile()
+                if path:
+                    down_path_list.append(path)
+        return down_path_list
 
     def __recv_handle(self):
         while not self.isclosed():
