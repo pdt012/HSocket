@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
-from typing import Tuple, Optional, Union, List, Dict, Any, BinaryIO
+from typing import Optional, Union, BinaryIO
 import socket
 import os
-from .message import Header, Message, MessageConfig
+from .message import *
 
 
 class SocketConfig:
@@ -11,29 +11,47 @@ class SocketConfig:
     FILENAME_ENCODING = "utf-8"
 
 
-class HTcpSocket(socket.socket):
-    def __init__(self, family=socket.AF_INET, type_=socket.SOCK_STREAM, proto=-1, fileno=None):
+class _HSocket(socket.socket):
+    def __init__(self, family=-1, type_=-1, proto=-1, fileno=None):
         super().__init__(family, type_, proto, fileno)
-        self.sendfile
 
     def isValid(self) -> bool:
         return self.fileno != -1
+
+
+class HTcpSocket(_HSocket):
+    def __init__(self, family=socket.AF_INET, fileno=None):
+        super().__init__(family, socket.SOCK_STREAM, fileno=fileno)
     
-    def accept(self) -> Tuple["HTcpSocket", Tuple[str, int]]:
+    def accept(self) -> tuple["HTcpSocket", tuple[str, int]]:
+        # Paraphrased from socket.socket.accept()
         fd, addr = self._accept()
-        sock = HTcpSocket(self.family, self.type, self.proto, fileno=fd)
-        if self.gettimeout():
+        sock = HTcpSocket(self.family, fileno=fd)
+        if socket.getdefaulttimeout() is None and self.gettimeout():
             sock.setblocking(True)
         return sock, addr
 
-    def sendMsg(self, msg: "Message") -> bool:
-        data = msg.to_bytes()
-        self.sendall(data)
-        return True
+    def sendMsg(self, msg: Message):
+        """发送一个数据包
 
-    def recvMsg(self) -> "Message":
+        Raises:
+            OSError: 套接字异常时抛出。
+        """
+        data = msg.toBytes()
+        self.sendall(data)
+
+    def recvMsg(self) -> Message:
+        """尝试接收一个数据包
+
+        Raises:
+            TimeoutError: 阻塞模式下等待超时时抛出。
+            OSError: 套接字异常时抛出。
+
+        Returns:
+            Message: 收到空报文时返回空Message
+        """
         data = b""
-        header = Header.from_bytes(self.recv(Header.HEADER_LENGTH))
+        header = Header.fromBytes(self.recv(Header.HEADER_LENGTH))
         if header:
             size = header.length
             while len(data) < size:  # 未接收完
@@ -48,6 +66,15 @@ class HTcpSocket(socket.socket):
             return Message()
 
     def sendFile(self, file: BinaryIO, filename: str):
+        """发送一个文件
+
+        Raises:
+            OSError: 套接字异常或文件读取异常时抛出。
+
+        Args:
+            file (BinaryIO): 可读的文件对象
+            filename (str): 文件名
+        """
         # get file size
         file.seek(0, os.SEEK_END)
         filesize = file.tell()
@@ -64,6 +91,15 @@ class HTcpSocket(socket.socket):
             self.sendall(data)
 
     def recvFile(self) -> str:
+        """尝试接收一个文件
+
+        Raises:
+            TimeoutError: 阻塞模式下等待超时时抛出。
+            OSError: 套接字异常或文件写入异常时抛出。
+
+        Returns:
+            str: 成功接收的文件路径，若接收失败则返回空字符串。
+        """
         filename_b: bytes = b""
         # filename
         while True:
@@ -93,23 +129,31 @@ class HTcpSocket(socket.socket):
             return ""
 
 
-class HUdpSocket(socket.socket):
-    def __init__(self):
-        super().__init__(socket.AF_INET, socket.SOCK_DGRAM)
+class HUdpSocket(_HSocket):
+    def __init__(self, family=socket.AF_INET, fileno=None):
+        super().__init__(family, socket.SOCK_DGRAM, fileno=fileno)
 
-    def isValid(self) -> bool:
-        return self.fileno != -1
+    def sendMsg(self, msg: "Message", address: tuple[str, int]) -> bool:
+        """发送一个数据包
 
-    def sendMsg(self, msg: "Message", address: Tuple[str, int]) -> bool:
-        data = msg.to_bytes()
-        return bool(self.sendto(data, address))
+        Args:
+            msg (Message): 数据包
+            address (tuple[str, int]): 目标地址
 
-    def recvMsg(self) -> Tuple[Optional["Message"], Optional[Tuple[str, int]]]:
+        Returns:
+            bool: 数据是否全部发送
+        """
+        data = msg.toBytes()
+        return self.sendto(data, address) == len(data)
+
+    def recvMsg(self) -> tuple[Message, Optional[tuple[str, int]]]:
+        """接收一个数据包
+
+        Returns:
+            tuple[Message, Optional[tuple[str, int]]]: 数据包(可能为Error包或空包)，源地址
+        """
         try:
             data, from_ = self.recvfrom(65535)
         except ConnectionResetError:  # received an ICMP unreachable
-            return None, None
-        if data:
-            return Message.from_bytes(data), from_
-        else:
-            return None, None
+            return Message(ContentType), None
+        return Message.fromBytes(data), from_
