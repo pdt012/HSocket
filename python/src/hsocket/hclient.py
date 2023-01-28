@@ -3,8 +3,8 @@ from typing import Optional
 import threading
 import socket
 from enum import Enum, auto
-from .hsocket import HTcpSocket, HUdpSocket
-from .message import Header, Message
+from .hsocket import *
+from .message import *
 
 
 class ClientMode(Enum):
@@ -19,6 +19,9 @@ class HTcpClient:
         self.__mode = mode
         if self.__mode is ClientMode.ASYNCHRONOUS:
             self.__message_thread = threading.Thread(target=self.__recv_handle, daemon=True)
+            self.__ftp_pacv_con = threading.Condition()
+        self.__ftp_server_ip = ""
+        self.__ftp_server_port = 0
 
     def socket(self) -> "HTcpSocket":
         return self.__tcp_socket
@@ -28,6 +31,7 @@ class HTcpClient:
 
     def connect(self, addr):
         self.__tcp_socket.connect(addr)
+        self.__ftp_server_ip = addr[0]
         if self.__mode is ClientMode.ASYNCHRONOUS:
             self.__message_thread.start()
 
@@ -66,15 +70,29 @@ class HTcpClient:
                 return response
         return None
     
-    def sendfile(self, path: str, filename: str, ftpaddr: tuple):
+    def sendfile(self, path: str, filename: str):
+        # get server's tranfer port
+        if self.__mode is ClientMode.ASYNCHRONOUS:
+            self.__ftp_pacv_con.wait()  # wait for a FTP_TRANSFER_PORT reply
+        else:
+            msg = self.__tcp_socket.recvMsg()
+            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+                self.__ftp_server_port = msg.statuscode()
         with HTcpSocket() as ftp_socket:
-            ftp_socket.connect(ftpaddr)
+            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
             with open(path, 'rb') as fin:
                 ftp_socket.sendFile(fin, filename)
     
-    def recvfile(self, ftpaddr: tuple):
+    def recvfile(self):
+        # get server's tranfer port
+        if self.__mode is ClientMode.ASYNCHRONOUS:
+            self.__ftp_pacv_con.wait()  # wait for a PACV reply
+        else:
+            msg = self.__tcp_socket.recvMsg()
+            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+                self.__ftp_server_port = msg.statuscode()
         with HTcpSocket() as ftp_socket:
-            ftp_socket.connect(ftpaddr)
+            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
             down_path = ftp_socket.recvFile()
         return down_path
 
@@ -96,6 +114,10 @@ class HTcpClient:
                 self.close()
                 break
             else:
+                if msg.contenttype() == ContentType.FTP_PASV:  # file
+                    self.__ftp_server_port = msg.statuscode()
+                    self.__ftp_pacv_con.notify()
+                    continue
                 self._messageHandle(msg)
 
     def _messageHandle(self, msg: "Message"):

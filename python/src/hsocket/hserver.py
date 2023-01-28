@@ -3,6 +3,7 @@ import selectors
 from typing import Callable
 from abc import abstractmethod
 from .hsocket import *
+from .message import *
 
 
 class HServerSelector:
@@ -81,13 +82,12 @@ class HServerSelector:
 
 class HTcpServer:
     def __init__(self):
-        self.__addr: tuple = None
+        self.__ip: str = ""
         self.__ftpaddr: tuple = None
         self.__selector = HServerSelector(self._messageHandle, self._onConnected, self._onDisconnected)
 
-    def start(self, addr, ftpport=0):
-        self.__addr = addr
-        self.__ftpaddr = (addr[0], ftpport)
+    def start(self, addr):
+        self.__ip = addr[0]
         self.__selector.start(addr)
 
     def close(self):
@@ -96,18 +96,22 @@ class HTcpServer:
     def remove(self, conn: "HTcpSocket"):
         self.__selector.remove(conn)
 
-    def sendfile(self, path: str, filename: str):
+    def sendfile(self, conn: HTcpSocket, path: str, filename: str):
         with HTcpSocket() as ftp_socket:
-            ftp_socket.bind(self.__ftpaddr)
+            ftp_socket.bind((self.__ip, 0))
+            port = ftp_socket.getsockname()[1]
+            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()
             with open(path, 'rb') as fin:
                 c_socket.sendFile(fin, filename)
             c_socket.close()
     
-    def recvfile(self):
+    def recvfile(self, conn: HTcpSocket):
         with HTcpSocket() as ftp_socket:
-            ftp_socket.bind(self.__ftpaddr)
+            ftp_socket.bind((self.__ip, 0))
+            port = ftp_socket.getsockname()[1]
+            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()
             down_path = c_socket.recvFile()

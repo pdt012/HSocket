@@ -12,9 +12,9 @@ class TcpServerApp(HTcpServer):
         addr = conn.getpeername()
         match msg.opcode():
             case 100:  # 上传
-                self.recvfile()
+                self.recvfile(conn)
             case 101:  # 下载
-                self.sendfile("testfile/test1.txt", "test1_by_server.txt")
+                self.sendfile(conn, "testfile/test1.txt", "test1_by_server.txt")
             # case 110:  # 上传
             #     conn.recvFiles()
             # case 111:  # 下载
@@ -30,7 +30,7 @@ class TcpServerApp(HTcpServer):
 if __name__ == '__main__':
     server = TcpServerApp()
     try:
-        server.start(("127.0.0.1", 40000), ftpport=40020)
+        server.start(("127.0.0.1", 40000))
     except Exception as e:
         print(print_exc())
     input("press enter to exit")

@@ -27,10 +27,10 @@ if __name__ == '__main__':
                 match code:
                     case 100:  # 上传
                         client.send(Message.HeaderOnlyMsg(100))
-                        client.sendfile("testfile/test1.txt", "test1_by_client.txt", ("127.0.0.1", 40020))
+                        client.sendfile("testfile/test1.txt", "test1_by_client.txt")
                     case 101:  # 下载
                         client.send(Message.HeaderOnlyMsg(101))
-                        client.recvfile(("127.0.0.1", 40020))
+                        client.recvfile()
                     # case 110:  # 上传
                     #     client.send(Message.HeaderOnlyMsg(110))
                     #     client.socket().sendFiles(["testfile/test1.txt", "testfile/test2.txt"],

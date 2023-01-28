@@ -1,15 +1,19 @@
 # -*- coding: utf-8 -*-
 from typing import Optional, Union, Any
+from enum import IntEnum
 import json
 
 
-class ContentType:
+class ContentType(IntEnum):
     NONE = 0x0  # 空报文
     ERROR_ = 0x1  # 错误报文
     HEADERONLY = 0x2  # 只含报头
     PLAINTEXT = 0x3  # 纯文本内容
     JSONOBJRCT = 0x4  # JSON对象
     BINARY = 0x5  # 二进制串
+    # FTP_PORT = 0xF00
+    # FTP_PASV = 0xF01
+    FTP_TRANSFER_PORT = 0xF02  # 文件传输端口 (statuscode: port)
 
 
 class MessageConfig:
@@ -53,17 +57,18 @@ class Message:
         self.__json: dict = {}
         
         if content:
-            if contenttype == ContentType.HEADERONLY:
-                pass
-            elif contenttype == ContentType.PLAINTEXT and isinstance(content, str):
-                self.__content = content
-            elif contenttype == ContentType.JSONOBJRCT and isinstance(content, str):
-                self.__content = content
-                self.__json = json.loads(content)
-            elif contenttype == ContentType.BINARY and isinstance(content, bytes):
-                self.__content = content
-            else:
-                raise ValueError()
+            match self.__contenttype:
+                case ContentType.HEADERONLY | ContentType.FTP_TRANSFER_PORT:
+                    pass
+                case ContentType.PLAINTEXT if isinstance(content, str):
+                    self.__content = content
+                case ContentType.JSONOBJRCT if isinstance(content, str):
+                    self.__content = content
+                    self.__json = json.loads(content)
+                case ContentType.BINARY if isinstance(content, bytes):
+                    self.__content = content
+                case _:
+                    raise ValueError()
     
     @classmethod
     def HeaderContent(cls, header: Header, content: Union[str, bytes]) -> "Message":
@@ -122,16 +127,17 @@ class Message:
         return self.__statuscode
         
     def to_bytes(self) -> bytes:
-        if self.__contenttype == ContentType.HEADERONLY:
-            content = b""
-        elif self.__contenttype == ContentType.PLAINTEXT and isinstance(self.__content, str):
-            content = self.__content.encode(MessageConfig.ENCODING)
-        elif self.__contenttype == ContentType.JSONOBJRCT and isinstance(self.__content, str):
-            content = json.dumps(self.__json).encode(MessageConfig.ENCODING)
-        elif self.__contenttype == ContentType.BINARY and isinstance(self.__content, bytes):
-            content = self.__content
-        else:
-            raise ValueError()
+        match self.__contenttype:
+            case ContentType.HEADERONLY | ContentType.FTP_TRANSFER_PORT:
+                content = b""
+            case ContentType.PLAINTEXT if isinstance(self.__content, str):
+                content = self.__content.encode(MessageConfig.ENCODING)
+            case ContentType.JSONOBJRCT if isinstance(self.__content, str):
+                content = json.dumps(self.__json).encode(MessageConfig.ENCODING)
+            case ContentType.BINARY if isinstance(self.__content, bytes):
+                content = self.__content
+            case _:
+                raise ValueError()
         length = len(content)  # 数据包长度(不包含报头)
         header = Header(self.__contenttype, self.__opcode, self.__statuscode, length)
         return header.to_bytes() + content
