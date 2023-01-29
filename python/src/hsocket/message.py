@@ -3,7 +3,6 @@ from typing import Optional, Union, Any, Self
 from enum import IntEnum
 import json
 
-
 class ContentType(IntEnum):
     NONE = 0x0  # 空报文
     ERROR_ = 0x1  # 错误报文
@@ -11,9 +10,7 @@ class ContentType(IntEnum):
     PLAINTEXT = 0x3  # 纯文本内容
     JSONOBJRCT = 0x4  # JSON对象
     BINARY = 0x5  # 二进制串
-    # FTP_PORT = 0xF00
-    # FTP_PASV = 0xF01
-    FTP_TRANSFER_PORT = 0xF02  # 文件传输端口 (statuscode: port)
+    FT_TRANSFER_PORT = 0xF02  # 文件传输端口 (statuscode: port)
 
 
 class MessageConfig:
@@ -63,7 +60,7 @@ class Message:
         
         if content:
             match self.__contenttype:
-                case ContentType.HEADERONLY | ContentType.FTP_TRANSFER_PORT:
+                case ContentType.HEADERONLY | ContentType.FT_TRANSFER_PORT:
                     pass
                 case ContentType.PLAINTEXT if isinstance(content, str):
                     self.__content = content
@@ -160,7 +157,7 @@ class Message:
             ValueError: 当正文内容与类型不匹配时抛出。
         """
         match self.__contenttype:
-            case ContentType.HEADERONLY | ContentType.FTP_TRANSFER_PORT:
+            case ContentType.HEADERONLY | ContentType.FT_TRANSFER_PORT:
                 content = b""
             case ContentType.PLAINTEXT if isinstance(self.__content, str):
                 content = self.__content.encode(MessageConfig.ENCODING)

@@ -101,7 +101,7 @@ class HTcpServer:
             # connect
             ftp_socket.bind((self.__ip, 0))
             port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
             ftp_socket.settimeout(15)
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()
@@ -115,7 +115,7 @@ class HTcpServer:
             # connect
             ftp_socket.bind((self.__ip, 0))
             port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
             ftp_socket.settimeout(15)
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()
@@ -132,7 +132,7 @@ class HTcpServer:
             # connect
             ftp_socket.bind((self.__ip, 0))
             port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
             ftp_socket.settimeout(15)
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()
@@ -154,7 +154,7 @@ class HTcpServer:
             # connect
             ftp_socket.bind((self.__ip, 0))
             port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FTP_TRANSFER_PORT, statuscode=port))
+            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
             ftp_socket.settimeout(15)
             ftp_socket.listen(1)
             c_socket, c_addr = ftp_socket.accept()

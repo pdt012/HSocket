@@ -77,7 +77,7 @@ class HTcpClient:
             self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
         else:
             msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
                 self.__ftp_server_port = msg.statuscode()
         # send
         with HTcpSocket() as ftp_socket:
@@ -91,7 +91,7 @@ class HTcpClient:
             self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
         else:
             msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
                 self.__ftp_server_port = msg.statuscode()
             else:
                  return ""
@@ -109,7 +109,7 @@ class HTcpClient:
             self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
         else:
             msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
                 self.__ftp_server_port = msg.statuscode()
             else:
                  return 0
@@ -133,7 +133,7 @@ class HTcpClient:
             self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
         else:
             msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FTP_TRANSFER_PORT:
+            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
                 self.__ftp_server_port = msg.statuscode()
         # recv
         down_path_list = []
