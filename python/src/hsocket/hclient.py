@@ -159,7 +159,7 @@ class HTcpClient:
                 self.close()
                 break
             else:
-                if msg.contenttype() == ContentType.FTP_PASV:  # file
+                if msg.contenttype() == ContentType.FT_TRANSFER_PORT:  # file
                     self.__ftp_server_port = msg.statuscode()
                     self.__ftp_pacv_con.notify()
                     continue
