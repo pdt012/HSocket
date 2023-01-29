@@ -6,13 +6,13 @@ from .hsocket import *
 from .message import *
 
 
-class HServerSelector:
+class _HServerSelector:
     def __init__(self, messageHandle: Callable, onConnected: Callable, onDisconnected: Callable):
         self.messageHandle = messageHandle
         self.onDisconnected = onDisconnected
         self.onConnected = onConnected
-        self.server_socket: "HTcpSocket" = None
-        self.msgs: dict["HTcpSocket", "Message"] = {}
+        self.server_socket: HTcpSocket = None
+        self.msgs: dict[HTcpSocket, Message] = {}
 
     def start(self, addr, backlog=10):
         self.server_socket = HTcpSocket()
@@ -39,7 +39,7 @@ class HServerSelector:
             fobj.close()
         self.selector.close()
 
-    def callback_accept(self, server_socket: "HTcpSocket"):
+    def callback_accept(self, server_socket: HTcpSocket):
         conn, addr = server_socket.accept()
         print("connected: {}".format(addr))
         conn.setblocking(False)
@@ -47,7 +47,7 @@ class HServerSelector:
         self.selector.register(conn, selectors.EVENT_READ, self.callback_read)
         self.onConnected(conn, addr)
 
-    def callback_read(self, conn: "HTcpSocket"):
+    def callback_read(self, conn: HTcpSocket):
         if not conn.isValid():
             print("not a socket")
             self.selector.unregister(conn)
@@ -69,110 +69,84 @@ class HServerSelector:
             print("connection closed: {}".format(addr))
             self.onDisconnected(addr)  # disconnect callback
 
-    def callback_write(self, conn: "HTcpSocket"):
+    def callback_write(self, conn: HTcpSocket):
         msg = self.msgs[conn]
         if msg:
             self.messageHandle(conn, msg)
             self.msgs[conn] = None
         self.selector.modify(conn, selectors.EVENT_READ, self.callback_read)
 
-    def remove(self, conn: "HTcpSocket"):
+    def remove(self, conn: HTcpSocket):
         self.selector.unregister(conn)
 
 
 class HTcpServer:
     def __init__(self):
         self.__ip: str = ""
-        self.__ftpaddr: tuple = None
-        self.__selector = HServerSelector(self._messageHandle, self._onConnected, self._onDisconnected)
+        self.__selector = _HServerSelector(self._messageHandle, self._onConnected, self._onDisconnected)
 
-    def start(self, addr):
+    def startserver(self, addr):
         self.__ip = addr[0]
         self.__selector.start(addr)
 
-    def close(self):
+    def closeserver(self):
         self.__selector.stop()
 
-    def remove(self, conn: "HTcpSocket"):
+    def closeconn(self, conn: HTcpSocket):
         self.__selector.remove(conn)
+        conn.close()
+
+    def _get_ft_tranfer_conn(self, conn: HTcpSocket) -> HTcpSocket:
+        with HTcpSocket() as ft_socket:
+            ft_socket.bind((self.__ip, 0))
+            port = ft_socket.getsockname()[1]
+            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
+            ft_socket.settimeout(15)
+            ft_socket.listen(1)
+            c_socket, c_addr = ft_socket.accept()
+            return c_socket
 
     def sendfile(self, conn: HTcpSocket, path: str, filename: str):
-        with HTcpSocket() as ftp_socket:
-            # connect
-            ftp_socket.bind((self.__ip, 0))
-            port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
-            ftp_socket.settimeout(15)
-            ftp_socket.listen(1)
-            c_socket, c_addr = ftp_socket.accept()
-            # send
+        with self._get_ft_tranfer_conn(conn) as c_socket:
             with open(path, 'rb') as fin:
                 c_socket.sendFile(fin, filename)
-            c_socket.close()
-    
+
     def recvfile(self, conn: HTcpSocket) -> str:
-        with HTcpSocket() as ftp_socket:
-            # connect
-            ftp_socket.bind((self.__ip, 0))
-            port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
-            ftp_socket.settimeout(15)
-            ftp_socket.listen(1)
-            c_socket, c_addr = ftp_socket.accept()
-            # recv
+        with self._get_ft_tranfer_conn(conn) as c_socket:
             down_path = c_socket.recvFile()
-            c_socket.close()
-        return down_path
+            return down_path
 
     def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
         if len(paths) != len(filenames):
             return 0
-        count_sent = 0
-        with HTcpSocket() as ftp_socket:
-            # connect
-            ftp_socket.bind((self.__ip, 0))
-            port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
-            ftp_socket.settimeout(15)
-            ftp_socket.listen(1)
-            c_socket, c_addr = ftp_socket.accept()
-            # send
+        with self._get_ft_tranfer_conn(conn) as c_socket:
             files_header_msg = Message.JsonMsg(0, 0, {"file_count": len(paths)})
             c_socket.sendMsg(files_header_msg)
+            count_sent = 0
             for i in range(len(paths)):
                 path = paths[i]
                 filename = filenames[i]
                 with open(path, 'rb') as fin:
                     c_socket.sendFile(fin, filename)
                     count_sent += 1
-            c_socket.close()
-        return count_sent
+            return count_sent
 
     def recvfiles(self, conn: HTcpSocket) -> list[str]:
-        down_path_list = []
-        with HTcpSocket() as ftp_socket:
-            # connect
-            ftp_socket.bind((self.__ip, 0))
-            port = ftp_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
-            ftp_socket.settimeout(15)
-            ftp_socket.listen(1)
-            c_socket, c_addr = ftp_socket.accept()
-            # recv
+        with self._get_ft_tranfer_conn(conn) as c_socket:
             files_header_msg = c_socket.recvMsg()
             file_count = files_header_msg.get("file_count")
+            down_path_list = []
             for i in range(file_count):
                 path = c_socket.recvFile()
                 if path:
                     down_path_list.append(path)
-            c_socket.close()
-        return down_path_list
+            return down_path_list
 
     @abstractmethod
-    def _messageHandle(self, conn: "HTcpSocket", msg: "Message"):
+    def _messageHandle(self, conn: HTcpSocket, msg: Message):
         ...
 
-    def _onConnected(self, conn: "HTcpSocket", addr):
+    def _onConnected(self, conn: HTcpSocket, addr):
         pass
 
     def _onDisconnected(self, addr):
@@ -181,12 +155,12 @@ class HTcpServer:
 
 class HUdpServer:
     def __init__(self):
-        self.__udp_socket: "HUdpSocket" = None
+        self.__udp_socket: HUdpSocket = None
 
-    def socket(self) -> "HUdpSocket":
+    def socket(self) -> HUdpSocket:
         return self.__udp_socket
 
-    def start(self, addr):
+    def startserver(self, addr):
         self.__udp_socket = HUdpSocket()
         self.__udp_socket.bind(addr)
         while True:
@@ -195,12 +169,12 @@ class HUdpServer:
             msg, from_ = self.__udp_socket.recvMsg()
             self._messageHandle(msg, from_)
     
-    def close(self):
+    def closeserver(self):
         self.__udp_socket.close()
 
-    def sendto(self, msg: "Message", c_addr):
+    def sendto(self, msg: Message, c_addr):
         self.__udp_socket.sendMsg(msg, c_addr)
     
     @abstractmethod
-    def _messageHandle(self, msg: "Message", c_addr):
+    def _messageHandle(self, msg: Message, c_addr):
         ...

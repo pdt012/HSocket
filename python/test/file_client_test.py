@@ -26,20 +26,20 @@ if __name__ == '__main__':
                 response = None
                 match code:
                     case 100:  # 上传
-                        client.send(Message.HeaderOnlyMsg(100))
+                        client.sendmsg(Message.HeaderOnlyMsg(100))
                         client.sendfile("testfile/test1.txt", "test1_by_client.txt")
                         print(f"send file")
                     case 101:  # 下载
-                        client.send(Message.HeaderOnlyMsg(101))
+                        client.sendmsg(Message.HeaderOnlyMsg(101))
                         path = client.recvfile()
                         print(f"recv file '{path}'")
                     case 110:  # 上传
-                        client.send(Message.HeaderOnlyMsg(110))
+                        client.sendmsg(Message.HeaderOnlyMsg(110))
                         count = client.sendfiles(["testfile/test1.txt", "testfile/test2.txt"],
                                                  ["test1_by_client.txt", "test2_by_client.txt"])
                         print(f"send files ({count})")
                     case 111:  # 下载
-                        client.send(Message.HeaderOnlyMsg(111))
+                        client.sendmsg(Message.HeaderOnlyMsg(111))
                         paths = client.recvfiles()
                         print(f"recv file {paths}")
                     case _:
