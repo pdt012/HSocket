@@ -1,6 +1,6 @@
 ﻿#include <iostream>
-#include "../hsocket/include/HTcpSocket.h"
-#include "../hsocket/include/convert/convert.cpp"
+#include "../src/hsocket/include/HTcpSocket.h"
+#include "../src/hsocket/include/convert/convert.cpp"
 
 #ifdef _DEBUG
 #ifdef _WIN64

@@ -8,7 +8,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "test", "test\test.vcxproj",
 		{7B3C5E15-9D70-4678-BBEA-C7DE6386409F} = {7B3C5E15-9D70-4678-BBEA-C7DE6386409F}
 	EndProjectSection
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hsocket", "hsocket\hsocket.vcxproj", "{7B3C5E15-9D70-4678-BBEA-C7DE6386409F}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "hsocket", "src\hsocket\hsocket.vcxproj", "{7B3C5E15-9D70-4678-BBEA-C7DE6386409F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
