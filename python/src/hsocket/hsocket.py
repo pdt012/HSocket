@@ -155,5 +155,5 @@ class HUdpSocket(_HSocket):
         try:
             data, from_ = self.recvfrom(65535)
         except ConnectionResetError:  # received an ICMP unreachable
-            return Message(ContentType), None
+            return Message(ContentType.ERROR_), None
         return Message.fromBytes(data), from_

@@ -10,7 +10,6 @@ class ContentType(IntEnum):
     PLAINTEXT = 0x3  # 纯文本内容
     JSONOBJRCT = 0x4  # JSON对象
     BINARY = 0x5  # 二进制串
-    FT_TRANSFER_PORT = 0xF02  # 文件传输端口 (statuscode: port)
 
 
 class MessageConfig:
@@ -60,7 +59,7 @@ class Message:
         
         if content:
             match self.__contenttype:
-                case ContentType.HEADERONLY | ContentType.FT_TRANSFER_PORT:
+                case ContentType.HEADERONLY:
                     pass
                 case ContentType.PLAINTEXT if isinstance(content, str):
                     self.__content = content
@@ -75,7 +74,7 @@ class Message:
     @classmethod
     def HeaderContent(cls, header: Header, content: Union[str, bytes]) -> Self:
         """由Header和正文内容组成Message"""
-        if header == None:
+        if header is None:
             return Message()
         msg = Message(header.contenttype, header.opcode, header.statuscode, content)
         return msg
@@ -157,7 +156,7 @@ class Message:
             ValueError: 当正文内容与类型不匹配时抛出。
         """
         match self.__contenttype:
-            case ContentType.HEADERONLY | ContentType.FT_TRANSFER_PORT:
+            case ContentType.HEADERONLY:
                 content = b""
             case ContentType.PLAINTEXT if isinstance(self.__content, str):
                 content = self.__content.encode(MessageConfig.ENCODING)

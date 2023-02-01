@@ -5,6 +5,7 @@ import socket
 from enum import Enum, auto
 from .hsocket import *
 from .message import *
+from .hserver import BuiltInOpCode
 
 
 class ClientMode(Enum):
@@ -70,15 +71,23 @@ class HTcpClient:
             else:
                 return response
         return None
+
+    def _get_ft_transfer_port(self) -> bool:
+        try:
+            if self.__mode is ClientMode.ASYNCHRONOUS:
+                self.__ftp_pacv_con.wait()  # wait for an FTP_TRANSFER_PORT reply
+                return True
+            else:
+                msg = self.__tcp_socket.recvMsg()
+                if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
+                    self.__ftp_server_port = msg.get("port")
+                    return True
+        except TimeoutError:
+            return False
     
     def sendfile(self, path: str, filename: str):
-        # get server's tranfer port
-        if self.__mode is ClientMode.ASYNCHRONOUS:
-            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
-        else:
-            msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
-                self.__ftp_server_port = msg.statuscode()
+        if not self._get_ft_transfer_port():
+            return
         # send
         with HTcpSocket() as ftp_socket:
             ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
@@ -86,15 +95,8 @@ class HTcpClient:
                 ftp_socket.sendFile(fin, filename)
     
     def recvfile(self) -> str:
-        # get server's tranfer port
-        if self.__mode is ClientMode.ASYNCHRONOUS:
-            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
-        else:
-            msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
-                self.__ftp_server_port = msg.statuscode()
-            else:
-                 return ""
+        if not self._get_ft_transfer_port():
+            return ""
         # recv
         with HTcpSocket() as ftp_socket:
             ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
@@ -102,17 +104,10 @@ class HTcpClient:
         return down_path
 
     def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
+        if not self._get_ft_transfer_port():
+            return 0
         if len(paths) != len(filenames):
             return 0
-        # get server's tranfer port
-        if self.__mode is ClientMode.ASYNCHRONOUS:
-            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
-        else:
-            msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
-                self.__ftp_server_port = msg.statuscode()
-            else:
-                 return 0
         # send
         count_sent = 0
         with HTcpSocket() as ftp_socket:
@@ -128,13 +123,8 @@ class HTcpClient:
         return count_sent
 
     def recvfiles(self) -> list[str]:
-        # get server's tranfer port
-        if self.__mode is ClientMode.ASYNCHRONOUS:
-            self.__ftp_pacv_con.wait(15)  # wait for a FTP_TRANSFER_PORT reply
-        else:
-            msg = self.__tcp_socket.recvMsg()
-            if msg.contenttype() == ContentType.FT_TRANSFER_PORT:
-                self.__ftp_server_port = msg.statuscode()
+        if not self._get_ft_transfer_port():
+            return []
         # recv
         down_path_list = []
         with HTcpSocket() as ftp_socket:
@@ -159,8 +149,8 @@ class HTcpClient:
                 self.close()
                 break
             else:
-                if msg.contenttype() == ContentType.FT_TRANSFER_PORT:  # file
-                    self.__ftp_server_port = msg.statuscode()
+                if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
+                    self.__ftp_server_port = msg.get("port")
                     self.__ftp_pacv_con.notify()
                     continue
                 self._messageHandle(msg)

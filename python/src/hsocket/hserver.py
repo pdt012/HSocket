@@ -6,6 +6,10 @@ from .hsocket import *
 from .message import *
 
 
+class BuiltInOpCode(IntEnum):
+    FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
+
+
 class _HServerSelector:
     def __init__(self, messageHandle: Callable, onConnected: Callable, onDisconnected: Callable):
         self.messageHandle = messageHandle
@@ -96,30 +100,30 @@ class HTcpServer:
         self.__selector.remove(conn)
         conn.close()
 
-    def _get_ft_tranfer_conn(self, conn: HTcpSocket) -> HTcpSocket:
+    def _get_ft_transfer_conn(self, conn: HTcpSocket) -> HTcpSocket:
         with HTcpSocket() as ft_socket:
             ft_socket.bind((self.__ip, 0))
             port = ft_socket.getsockname()[1]
-            conn.sendMsg(Message(ContentType.FT_TRANSFER_PORT, statuscode=port))
+            conn.sendMsg(Message.JsonMsg(BuiltInOpCode.FT_TRANSFER_PORT, port=port))
             ft_socket.settimeout(15)
             ft_socket.listen(1)
             c_socket, c_addr = ft_socket.accept()
             return c_socket
 
     def sendfile(self, conn: HTcpSocket, path: str, filename: str):
-        with self._get_ft_tranfer_conn(conn) as c_socket:
+        with self._get_ft_transfer_conn(conn) as c_socket:
             with open(path, 'rb') as fin:
                 c_socket.sendFile(fin, filename)
 
     def recvfile(self, conn: HTcpSocket) -> str:
-        with self._get_ft_tranfer_conn(conn) as c_socket:
+        with self._get_ft_transfer_conn(conn) as c_socket:
             down_path = c_socket.recvFile()
             return down_path
 
     def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
         if len(paths) != len(filenames):
             return 0
-        with self._get_ft_tranfer_conn(conn) as c_socket:
+        with self._get_ft_transfer_conn(conn) as c_socket:
             files_header_msg = Message.JsonMsg(0, 0, {"file_count": len(paths)})
             c_socket.sendMsg(files_header_msg)
             count_sent = 0
@@ -132,7 +136,7 @@ class HTcpServer:
             return count_sent
 
     def recvfiles(self, conn: HTcpSocket) -> list[str]:
-        with self._get_ft_tranfer_conn(conn) as c_socket:
+        with self._get_ft_transfer_conn(conn) as c_socket:
             files_header_msg = c_socket.recvMsg()
             file_count = files_header_msg.get("file_count")
             down_path_list = []
