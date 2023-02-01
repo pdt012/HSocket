@@ -94,8 +94,8 @@ public:
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
-	void listen(SOCKET sock, int backlog) {
-		int ret = ::listen(sock, backlog);
+	void listen(int backlog) {
+		int ret = ::listen(handle, backlog);
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
@@ -109,6 +109,12 @@ public:
 			return HSocket(clientSock);
 	}
 
+	/**
+	 * @brief
+	 * @param data
+	 * @throw ConnectionError 连接异常时抛出
+	 * @return 发送长度
+	*/
 	int sendall(const std::string &data) {
 		int sentSize = 0;
 		do {
@@ -119,10 +125,16 @@ public:
 		return sentSize;
 	}
 
+	/**
+	 * @brief
+	 * @param buflen
+	 * @throw ConnectionError 连接异常时抛出
+	 * @return 接收的内容
+	*/
 	std::string recv(int buflen) {
 		char *buf = new char[buflen];
 		int ret = ::recv(handle, buf, buflen, NULL);
-		if (ret == SOCKET_ERROR) {
+		if (ret == -1) {
 			delete[] buf;
 			throw ConnectionError();
 		}
@@ -137,6 +149,13 @@ public:
 		}
 	}
 
+	/**
+	 * @brief
+	 * @param data
+	 * @param addr
+	 * @throw ConnectionError 连接异常时抛出
+	 * @return 发送长度
+	*/
 	int sendto(const std::string &data, const IPv4Address &addr) {
 		sockaddr_in to = addr.to_sockaddr_in();
 		int ret = ::sendto(handle, data.c_str(), data.size(), NULL, (SOCKADDR *)&to, sizeof(to));
@@ -144,6 +163,12 @@ public:
 		return ret;
 	}
 
+	/**
+	 * @brief
+	 * @param addr 返回发送者地址
+	 * @throw ConnectionError 连接异常时抛出
+	 * @return 接收的内容
+	*/
 	std::string recvfrom(IPv4Address *addr) {
 		SOCKADDR from;
 		int fromlen = sizeof(SOCKADDR);

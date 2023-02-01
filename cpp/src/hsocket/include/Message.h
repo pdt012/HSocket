@@ -11,6 +11,8 @@ enum ContentType : short
 	HEADERONLY = 0x2,  // 只含报头
 	PLAINTEXT = 0x3,  // 纯文本内容
 	JSONOBJRCT = 0x4,  // JSON对象
+	BINARY = 0x5,  // 二进制串
+	FT_TRANSFER_PORT = 0xF02  // 文件传输端口(statuscode: port)
 };
 
 
@@ -62,30 +64,35 @@ public:
 		delete __json;
 	}
 
+	/*由Header和正文内容组成Message*/
 	Message(Header &header, const std::string &content)
 		: Message(header.contenttype, header.opcode, header.statuscode, content)
 	{
 	}
 
+	/*不含正文的Message*/
 	static Message HeaderOnlyMsg(short opcode = 0, short statuscode = 0) {
 		return Message(ContentType::HEADERONLY, opcode, statuscode);
 	}
 
+	/*正文为纯文本的Message*/
 	static Message PlainTextMsg(short opcode = 0, short statuscode = 0, const std::string &text = "") {
 		return Message(ContentType::PLAINTEXT, opcode, statuscode, text);
 	}
 
+	/*正文为json对象的Message*/
 	static Message JsonMsg(short opcode, short statuscode, neb::CJsonObject &json) {
 		Message msg = Message(ContentType::JSONOBJRCT, opcode, statuscode);
 		msg.__json = new neb::CJsonObject(json);
 		return msg;
 	}
 
+	/*是否为非空/非错误包*/
 	bool isValid() {
 		return this->__contenttype != ContentType::NONE && this->__contenttype != ContentType::ERROR_;
 	}
 
-	/*获取报文内容码*/
+	/*获取内容码*/
 	short contenttype() {
 		return this->__contenttype;
 	}
@@ -100,6 +107,7 @@ public:
 		return this->__statuscode;
 	}
 
+	/*直接获取正文*/
 	std::string content() {
 		return this->__content;
 	}

@@ -7,7 +7,18 @@ class HUdpSocket : public HSocket
 public:
 	HUdpSocket();
 
+	/**
+	 * @brief 发送一个数据包
+	 * @param msg 数据包
+	 * @param addr 目标地址
+	 * @return 数据是否全部发送
+	*/
 	bool sendMsg(const Message &msg, const IPv4Address &addr);
 
+	/**
+	 * @brief 接收一个数据包
+	 * @param addr 返回发送方地址
+	 * @return 数据包(可能为Error包或空包)
+	*/
 	Message recvMsg(IPv4Address *addr);
 };

@@ -6,7 +6,8 @@ from .message import *
 
 
 class SocketConfig:
-    BUFFER_SIZE = 1024
+    RECV_BUFFER_SIZE = 1024
+    FILE_BUFFER_SIZE = 2048
     DEFAULT_DOWNLOAD_PATH = "download/"
     FILENAME_ENCODING = "utf-8"
 
@@ -37,8 +38,7 @@ class HTcpSocket(_HSocket):
         Raises:
             OSError: 套接字异常时抛出。
         """
-        data = msg.toBytes()
-        self.sendall(data)
+        self.sendall(msg.toBytes())
 
     def recvMsg(self) -> Message:
         """尝试接收一个数据包
@@ -55,7 +55,7 @@ class HTcpSocket(_HSocket):
         if header:
             size = header.length
             while len(data) < size:  # 未接收完
-                recv_size = min(size - len(data), SocketConfig.BUFFER_SIZE)
+                recv_size = min(size - len(data), SocketConfig.RECV_BUFFER_SIZE)
                 recv_data = self.recv(recv_size)
                 data += recv_data
             if data:
@@ -85,7 +85,7 @@ class HTcpSocket(_HSocket):
         self.sendall(filesize.to_bytes(4, 'little', signed=False))  # filesize
         # file content
         while True:
-            data = file.read(2048)
+            data = file.read(SocketConfig.FILE_BUFFER_SIZE)
             if not data:
                 break
             self.sendall(data)
@@ -100,8 +100,8 @@ class HTcpSocket(_HSocket):
         Returns:
             str: 成功接收的文件路径，若接收失败则返回空字符串。
         """
-        filename_b: bytes = b""
         # filename
+        filename_b: bytes = b""
         while True:
             char = self.recv(1)
             if char != b'\0':
@@ -117,13 +117,13 @@ class HTcpSocket(_HSocket):
             if not os.path.exists(SocketConfig.DEFAULT_DOWNLOAD_PATH):
                 os.makedirs(SocketConfig.DEFAULT_DOWNLOAD_PATH)
             down_path = os.path.join(SocketConfig.DEFAULT_DOWNLOAD_PATH, filename)
-            received_size = 0
+            total_recv_size = 0
             with open(down_path, 'wb') as fp:
-                while received_size < filesize:
-                    recv_size = min(filesize - received_size, SocketConfig.BUFFER_SIZE)
+                while total_recv_size < filesize:
+                    recv_size = min(filesize - total_recv_size, SocketConfig.RECV_BUFFER_SIZE)
                     data = self.recv(recv_size)
                     fp.write(data)
-                    received_size += len(data)
+                    total_recv_size += len(data)
             return down_path
         else:
             return ""
