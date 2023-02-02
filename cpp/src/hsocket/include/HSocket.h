@@ -3,11 +3,12 @@
 #include <WinSock2.h>
 #pragma comment (lib, "ws2_32.lib")
 
-class ConnectionError : public std::exception
+class SocketError : public std::exception
 {
 public:
-	ConnectionError() {
-		errcode = WSAGetLastError();
+	SocketError(int errcode)
+		: errcode(errcode)
+	{
 		char msgBuf[256];
 		::FormatMessageA(
 			FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
@@ -19,7 +20,8 @@ public:
 			NULL);
 		message = std::string(msgBuf);
 	}
-	virtual ~ConnectionError() = default;
+	SocketError() : SocketError(WSAGetLastError()) {}
+	virtual ~SocketError() = default;
 	virtual const char *what() const noexcept {
 		return message.c_str();
 	}
@@ -31,7 +33,7 @@ private:
 	std::string message;
 };
 
-#define THROW_IF_SOCKET_ERROR(code) if (code == SOCKET_ERROR) throw ConnectionError();
+#define THROW_IF_SOCKET_ERROR(code) if (code == SOCKET_ERROR) throw SocketError();
 
 class HSocket
 {
@@ -40,6 +42,8 @@ public:
 		//创建套接字
 		WSADATA wsaData;
 		int errcode = WSAStartup(MAKEWORD(2, 2), &wsaData);
+		if (errcode != 0)
+			throw SocketError(errcode);
 		this->handle = socket(af, type, protocol);
 	}
 
@@ -54,16 +58,30 @@ public:
 		return this->handle;
 	}
 
-	int setsockopt(int level, int optname, const char *optval, int optlen) {
-		int ret = ::setsockopt(handle, level, optname, optval, optlen);
-		THROW_IF_SOCKET_ERROR(ret);
-		return ret;
+	bool isValid() {
+		return handle != -1;
 	}
 
-	int getsockopt(int level, int optname, char *optval, int *optlen) {
+	void settimeout(int msec) {
+		int timeout = msec;
+		this->setsockopt(SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(int));
+		this->setsockopt(SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(int));
+	}
+
+	void setblocking(bool blocking) {
+		u_long arg = !blocking;
+		int ret = ioctlsocket(handle, FIONBIO, &arg);
+		THROW_IF_SOCKET_ERROR(ret);
+	}
+
+	void setsockopt(int level, int optname, const char *optval, int optlen) {
+		int ret = ::setsockopt(handle, level, optname, optval, optlen);
+		THROW_IF_SOCKET_ERROR(ret);
+	}
+
+	void getsockopt(int level, int optname, char *optval, int *optlen) {
 		int ret = ::getsockopt(handle, level, optname, optval, optlen);
 		THROW_IF_SOCKET_ERROR(ret);
-		return ret;
 	}
 
 	IPv4Address getsockname() {
@@ -94,8 +112,8 @@ public:
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
-	void listen(SOCKET sock, int backlog) {
-		int ret = ::listen(sock, backlog);
+	void listen(int backlog) {
+		int ret = ::listen(handle, backlog);
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
@@ -104,11 +122,17 @@ public:
 		int size = sizeof(SOCKADDR);
 		SOCKET clientSock = ::accept(handle, (SOCKADDR *)&clientAddr, &size);
 		if (clientSock == INVALID_SOCKET)
-			throw ConnectionError();
+			throw SocketError();
 		else
 			return HSocket(clientSock);
 	}
 
+	/**
+	 * @brief
+	 * @param data
+	 * @throw SocketError 连接异常时抛出
+	 * @return 发送长度
+	*/
 	int sendall(const std::string &data) {
 		int sentSize = 0;
 		do {
@@ -119,16 +143,22 @@ public:
 		return sentSize;
 	}
 
+	/**
+	 * @brief
+	 * @param buflen
+	 * @throw SocketError 连接异常时抛出
+	 * @return 接收的内容
+	*/
 	std::string recv(int buflen) {
 		char *buf = new char[buflen];
 		int ret = ::recv(handle, buf, buflen, NULL);
-		if (ret == SOCKET_ERROR) {
+		if (ret == -1) {
 			delete[] buf;
-			throw ConnectionError();
+			throw SocketError();
 		}
 		else if (ret == 0) {
 			delete[] buf;
-			throw ConnectionError();
+			throw SocketError();
 		}
 		else {
 			std::string str = std::string(buf, ret);
@@ -137,6 +167,13 @@ public:
 		}
 	}
 
+	/**
+	 * @brief
+	 * @param data
+	 * @param addr
+	 * @throw SocketError 连接异常时抛出
+	 * @return 发送长度
+	*/
 	int sendto(const std::string &data, const IPv4Address &addr) {
 		sockaddr_in to = addr.to_sockaddr_in();
 		int ret = ::sendto(handle, data.c_str(), data.size(), NULL, (SOCKADDR *)&to, sizeof(to));
@@ -144,6 +181,12 @@ public:
 		return ret;
 	}
 
+	/**
+	 * @brief
+	 * @param addr 返回发送者地址
+	 * @throw SocketError 连接异常时抛出
+	 * @return 接收的内容
+	*/
 	std::string recvfrom(IPv4Address *addr) {
 		SOCKADDR from;
 		int fromlen = sizeof(SOCKADDR);
@@ -151,11 +194,11 @@ public:
 		int ret = ::recvfrom(handle, buf, 65535, NULL, &from, &fromlen);
 		if (ret == SOCKET_ERROR) {
 			delete[] buf;
-			throw ConnectionError();
+			throw SocketError();
 		}
 		else if (ret == 0) {
 			delete[] buf;
-			throw ConnectionError();
+			throw SocketError();
 		}
 		else {
 			addr->from_sockaddr(from);
@@ -165,17 +208,17 @@ public:
 		}
 	}
 
-	int shutdown(int how) {
+	void shutdown(int how) {
 		int ret = ::shutdown(handle, how);
 		THROW_IF_SOCKET_ERROR(ret);
-		return ret;
 	}
 
-	int close() {
+	void close() {
+		if (!this->isValid())
+			return;
 		int ret = ::closesocket(handle);
 		THROW_IF_SOCKET_ERROR(ret);
-		handle = NULL;
-		return ret;
+		handle = -1;
 	}
 
 private:

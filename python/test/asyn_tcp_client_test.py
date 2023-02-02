@@ -31,9 +31,9 @@ if __name__ == '__main__':
                 code = int(code)
                 match code:
                     case 0:
-                        client.send(Message.JsonMsg(code, 0, text0="<0>test message send by client"))
+                        client.sendmsg(Message.JsonMsg(code, 0, text0="<0>test message send by client"))
                     case 1:
-                        client.send(Message.JsonMsg(code, 0, text1="<1>test message send by client"))
+                        client.sendmsg(Message.JsonMsg(code, 0, text1="<1>test message send by client"))
                     case _:
                         pass
             else:

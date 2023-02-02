@@ -3,15 +3,21 @@ import selectors
 from typing import Callable
 from abc import abstractmethod
 from .hsocket import *
+from .message import *
 
 
-class HServerSelector:
+class BuiltInOpCode(IntEnum):
+    FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
+    FT_SEND_FILES_HEADER = 62000 # 多文件传输时头部信息 {"file_count": 文件数}
+
+
+class _HServerSelector:
     def __init__(self, messageHandle: Callable, onConnected: Callable, onDisconnected: Callable):
         self.messageHandle = messageHandle
         self.onDisconnected = onDisconnected
         self.onConnected = onConnected
-        self.server_socket: "HTcpSocket" = None
-        self.msgs: Dict["HTcpSocket", "Message"] = {}
+        self.server_socket: HTcpSocket = None
+        self.msgs: dict[HTcpSocket, Message] = {}
 
     def start(self, addr, backlog=10):
         self.server_socket = HTcpSocket()
@@ -38,7 +44,7 @@ class HServerSelector:
             fobj.close()
         self.selector.close()
 
-    def callback_accept(self, server_socket: "HTcpSocket"):
+    def callback_accept(self, server_socket: HTcpSocket):
         conn, addr = server_socket.accept()
         print("connected: {}".format(addr))
         conn.setblocking(False)
@@ -46,7 +52,7 @@ class HServerSelector:
         self.selector.register(conn, selectors.EVENT_READ, self.callback_read)
         self.onConnected(conn, addr)
 
-    def callback_read(self, conn: "HTcpSocket"):
+    def callback_read(self, conn: HTcpSocket):
         if not conn.isValid():
             print("not a socket")
             self.selector.unregister(conn)
@@ -68,67 +74,84 @@ class HServerSelector:
             print("connection closed: {}".format(addr))
             self.onDisconnected(addr)  # disconnect callback
 
-    def callback_write(self, conn: "HTcpSocket"):
+    def callback_write(self, conn: HTcpSocket):
         msg = self.msgs[conn]
         if msg:
             self.messageHandle(conn, msg)
             self.msgs[conn] = None
         self.selector.modify(conn, selectors.EVENT_READ, self.callback_read)
 
-    def remove(self, conn: "HTcpSocket"):
+    def remove(self, conn: HTcpSocket):
         self.selector.unregister(conn)
 
 
 class HTcpServer:
     def __init__(self):
-        self.__selector = HServerSelector(self._messageHandle, self._onConnected, self._onDisconnected)
+        self.__ip: str = ""
+        self.__selector = _HServerSelector(self._messageHandle, self._onConnected, self._onDisconnected)
 
-    def start(self, addr):
+    def startserver(self, addr):
+        self.__ip = addr[0]
         self.__selector.start(addr)
 
-    def close(self):
+    def closeserver(self):
         self.__selector.stop()
 
-    def remove(self, conn: "HTcpSocket"):
+    def closeconn(self, conn: HTcpSocket):
         self.__selector.remove(conn)
+        conn.close()
 
-    @staticmethod
-    def sendFile(self, conn: "HTcpSocket", path: str, filename: str) -> bool:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.sendFile(path, filename)
-        conn.setblocking(isblocking)
-        return ret
+    def _get_ft_transfer_conn(self, conn: HTcpSocket) -> HTcpSocket:
+        with HTcpSocket() as ft_socket:
+            ft_socket.bind((self.__ip, 0))
+            port = ft_socket.getsockname()[1]
+            conn.sendMsg(Message.JsonMsg(BuiltInOpCode.FT_TRANSFER_PORT, port=port))
+            ft_socket.settimeout(15)
+            ft_socket.listen(1)
+            c_socket, c_addr = ft_socket.accept()
+            return c_socket
 
-    @staticmethod
-    def recvFile(self, conn: "HTcpSocket") -> str:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.recvFile()
-        conn.setblocking(isblocking)
-        return ret
+    def sendfile(self, conn: HTcpSocket, path: str, filename: str):
+        with self._get_ft_transfer_conn(conn) as c_socket:
+            with open(path, 'rb') as fin:
+                c_socket.sendFile(fin, filename)
 
-    @staticmethod
-    def sendFiles(self, conn: "HTcpSocket", paths: List[str], filenames: List[str]) -> int:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.sendFiles(paths, filenames)
-        conn.setblocking(isblocking)
-        return ret
+    def recvfile(self, conn: HTcpSocket) -> str:
+        with self._get_ft_transfer_conn(conn) as c_socket:
+            down_path = c_socket.recvFile()
+            return down_path
 
-    @staticmethod
-    def recvFiles(self, conn: "HTcpSocket") -> Tuple[List[str], int]:
-        isblocking = conn.getblocking()
-        conn.setblocking(True)  # 避免引发BlockingError
-        ret = conn.recvFiles()
-        conn.setblocking(isblocking)
-        return ret
+    def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
+        if len(paths) != len(filenames):
+            return 0
+        with self._get_ft_transfer_conn(conn) as c_socket:
+            files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
+            c_socket.sendMsg(files_header_msg)
+            count_sent = 0
+            for i in range(len(paths)):
+                path = paths[i]
+                filename = filenames[i]
+                with open(path, 'rb') as fin:
+                    c_socket.sendFile(fin, filename)
+                    count_sent += 1
+            return count_sent
+
+    def recvfiles(self, conn: HTcpSocket) -> list[str]:
+        with self._get_ft_transfer_conn(conn) as c_socket:
+            files_header_msg = c_socket.recvMsg()
+            file_count = files_header_msg.get("file_count")
+            down_path_list = []
+            for i in range(file_count):
+                path = c_socket.recvFile()
+                if path:
+                    down_path_list.append(path)
+            return down_path_list
 
     @abstractmethod
-    def _messageHandle(self, conn: "HTcpSocket", msg: "Message"):
+    def _messageHandle(self, conn: HTcpSocket, msg: Message):
         ...
 
-    def _onConnected(self, conn: "HTcpSocket", addr):
+    def _onConnected(self, conn: HTcpSocket, addr):
         pass
 
     def _onDisconnected(self, addr):
@@ -137,12 +160,12 @@ class HTcpServer:
 
 class HUdpServer:
     def __init__(self):
-        self.__udp_socket: "HUdpSocket" = None
+        self.__udp_socket: HUdpSocket = None
 
-    def socket(self) -> "HUdpSocket":
+    def socket(self) -> HUdpSocket:
         return self.__udp_socket
 
-    def start(self, addr):
+    def startserver(self, addr):
         self.__udp_socket = HUdpSocket()
         self.__udp_socket.bind(addr)
         while True:
@@ -151,12 +174,12 @@ class HUdpServer:
             msg, from_ = self.__udp_socket.recvMsg()
             self._messageHandle(msg, from_)
     
-    def close(self):
+    def closeserver(self):
         self.__udp_socket.close()
 
-    def sendto(self, msg: "Message", c_addr):
+    def sendto(self, msg: Message, c_addr):
         self.__udp_socket.sendMsg(msg, c_addr)
     
     @abstractmethod
-    def _messageHandle(self, msg: "Message", c_addr):
+    def _messageHandle(self, msg: Message, c_addr):
         ...

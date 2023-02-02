@@ -24,7 +24,7 @@ class UdpServerApp(HUdpServer):
 if __name__ == '__main__':
     server = UdpServerApp()
     try:
-        server.start(("127.0.0.1", 40000))
+        server.startserver(("127.0.0.1", 40000))
     except Exception as e:
         print(print_exc())
     input("press enter to exit")

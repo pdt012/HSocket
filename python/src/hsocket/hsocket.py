@@ -1,41 +1,61 @@
 # -*- coding: utf-8 -*-
-from typing import Tuple, Optional, Union, List, Dict, Any
+from typing import Optional, Union, BinaryIO
 import socket
 import os
-from .message import Header, Message, MessageConfig
+from .message import *
 
 
 class SocketConfig:
-    BUFFER_SIZE = 1024
+    RECV_BUFFER_SIZE = 1024
+    FILE_BUFFER_SIZE = 2048
     DEFAULT_DOWNLOAD_PATH = "download/"
+    FILENAME_ENCODING = "utf-8"
 
 
-class HTcpSocket(socket.socket):
-    def __init__(self, family=socket.AF_INET, type_=socket.SOCK_STREAM, proto=-1, fileno=None):
+class _HSocket(socket.socket):
+    def __init__(self, family=-1, type_=-1, proto=-1, fileno=None):
         super().__init__(family, type_, proto, fileno)
 
     def isValid(self) -> bool:
         return self.fileno != -1
+
+
+class HTcpSocket(_HSocket):
+    def __init__(self, family=socket.AF_INET, fileno=None):
+        super().__init__(family, socket.SOCK_STREAM, fileno=fileno)
     
-    def accept(self) -> Tuple["HTcpSocket", Tuple[str, int]]:
+    def accept(self) -> tuple["HTcpSocket", tuple[str, int]]:
+        # Paraphrased from socket.socket.accept()
         fd, addr = self._accept()
-        sock = HTcpSocket(self.family, self.type, self.proto, fileno=fd)
-        if self.gettimeout():
+        sock = HTcpSocket(self.family, fileno=fd)
+        if socket.getdefaulttimeout() is None and self.gettimeout():
             sock.setblocking(True)
         return sock, addr
 
-    def sendMsg(self, msg: "Message") -> bool:
-        data = msg.to_bytes()
-        self.sendall(data)
-        return True
+    def sendMsg(self, msg: Message):
+        """发送一个数据包
 
-    def recvMsg(self) -> "Message":
+        Raises:
+            OSError: 套接字异常时抛出。
+        """
+        self.sendall(msg.toBytes())
+
+    def recvMsg(self) -> Message:
+        """尝试接收一个数据包
+
+        Raises:
+            TimeoutError: 阻塞模式下等待超时时抛出。
+            OSError: 套接字异常时抛出。
+
+        Returns:
+            Message: 收到空报文时返回空Message
+        """
         data = b""
-        header = Header.from_bytes(self.recv(Header.HEADER_LENGTH))
+        header = Header.fromBytes(self.recv(Header.HEADER_LENGTH))
         if header:
             size = header.length
             while len(data) < size:  # 未接收完
-                recv_size = min(size - len(data), SocketConfig.BUFFER_SIZE)
+                recv_size = min(size - len(data), SocketConfig.RECV_BUFFER_SIZE)
                 recv_data = self.recv(recv_size)
                 data += recv_data
             if data:
@@ -45,96 +65,95 @@ class HTcpSocket(socket.socket):
         else:
             return Message()
 
-    def sendFile(self, path: str, filename: str) -> bool:
-        if not os.path.isfile(path):
-            return False
-        filesize = os.stat(path).st_size
-        file_header_msg = Message.JsonMsg(1001, 0, {"filename": filename, "size": filesize})
-        if self.sendMsg(file_header_msg):
-            with open(path, 'rb') as fp:
-                while True:
-                    data = fp.read(2048)
-                    if not data:
-                        break
-                    self.sendall(data)
-            # file_ending_msg = self.recvMsg()
-            # if file_ending_msg.isValid():
-            #     received_filename = file_ending_msg.get("filename")
-            #     received_filesize = file_ending_msg.get("size")
-            #     if filename == received_filename and filesize == received_filesize:
-            #         return True
-            return True
-        return False
+    def sendFile(self, file: BinaryIO, filename: str):
+        """发送一个文件
+
+        Raises:
+            OSError: 套接字异常或文件读取异常时抛出。
+
+        Args:
+            file (BinaryIO): 可读的文件对象
+            filename (str): 文件名
+        """
+        # get file size
+        file.seek(0, os.SEEK_END)
+        filesize = file.tell()
+        file.seek(0, os.SEEK_SET)
+        # file header
+        self.sendall(filename.encode(SocketConfig.FILENAME_ENCODING))  # filename
+        self.sendall(b'\0')  # name end
+        self.sendall(filesize.to_bytes(4, 'little', signed=False))  # filesize
+        # file content
+        while True:
+            data = file.read(SocketConfig.FILE_BUFFER_SIZE)
+            if not data:
+                break
+            self.sendall(data)
 
     def recvFile(self) -> str:
-        isblocking = self.getblocking()
-        self.setblocking(True)  # 避免收不到file_header_msg
-        file_header_msg = self.recvMsg()
-        if file_header_msg.isValid():
-            filename = file_header_msg.get("filename")
-            filesize = file_header_msg.get("size")
-            if filename and filesize > 0:
-                if not os.path.exists(SocketConfig.DEFAULT_DOWNLOAD_PATH):
-                    os.makedirs(SocketConfig.DEFAULT_DOWNLOAD_PATH)
-                down_path = os.path.join(SocketConfig.DEFAULT_DOWNLOAD_PATH, filename)
-                received_size = 0
-                with open(down_path, 'wb') as fp:
-                    # TODO 异常处理
-                    while received_size < filesize:
-                        recv_size = min(filesize - received_size, SocketConfig.BUFFER_SIZE)
-                        data = self.recv(recv_size)
-                        fp.write(data)
-                        received_size += len(data)
-                # file_ending_msg = Message.JsonMsg(1002, 0, {"filename": filename, "size": received_size})
-                # if self.sendMsg(file_ending_msg):
-                #     return down_path
-                self.setblocking(isblocking)
-                return down_path
-        self.setblocking(isblocking)
-        return ""
+        """尝试接收一个文件
 
-    def sendFiles(self, paths: List[str], filenames: List[str]) -> int:
-        if len(paths) != len(filenames):
-            return 0
-        files_header_msg = Message.JsonMsg(1011, 0, {"count": len(paths)})
-        if self.sendMsg(files_header_msg):
-            countSuccess = 0
-            for i in range(len(paths)):
-                if self.sendFile(paths[i], filenames[i]):
-                    countSuccess += 1
-            return countSuccess
-        return 0
+        Raises:
+            TimeoutError: 阻塞模式下等待超时时抛出。
+            OSError: 套接字异常或文件写入异常时抛出。
 
-    def recvFiles(self) -> Tuple[List[str], int]:
-        files_header_msg = self.recvMsg()
-        if not files_header_msg.isValid():
-            return [], 0
-        fileAmount = files_header_msg.get("count")
-        filepaths = []
-        for i in range(fileAmount):
-            filepath = self.recvFile()
-            if filepath:
-                filepaths.append(filepath)
-        return filepaths, fileAmount
+        Returns:
+            str: 成功接收的文件路径，若接收失败则返回空字符串。
+        """
+        # filename
+        filename_b: bytes = b""
+        while True:
+            char = self.recv(1)
+            if char != b'\0':
+                filename_b += char
+            else:
+                break
+        filename = filename_b.decode(SocketConfig.FILENAME_ENCODING)
+        # filesize
+        filesize_b = self.recv(4)
+        filesize = int.from_bytes(filesize_b, 'little', signed=False)
+        # file content
+        if filename and filesize > 0:
+            if not os.path.exists(SocketConfig.DEFAULT_DOWNLOAD_PATH):
+                os.makedirs(SocketConfig.DEFAULT_DOWNLOAD_PATH)
+            down_path = os.path.join(SocketConfig.DEFAULT_DOWNLOAD_PATH, filename)
+            total_recv_size = 0
+            with open(down_path, 'wb') as fp:
+                while total_recv_size < filesize:
+                    recv_size = min(filesize - total_recv_size, SocketConfig.RECV_BUFFER_SIZE)
+                    data = self.recv(recv_size)
+                    fp.write(data)
+                    total_recv_size += len(data)
+            return down_path
+        else:
+            return ""
 
 
-class HUdpSocket(socket.socket):
-    def __init__(self):
-        super().__init__(socket.AF_INET, socket.SOCK_DGRAM)
+class HUdpSocket(_HSocket):
+    def __init__(self, family=socket.AF_INET, fileno=None):
+        super().__init__(family, socket.SOCK_DGRAM, fileno=fileno)
 
-    def isValid(self) -> bool:
-        return self.fileno != -1
+    def sendMsg(self, msg: "Message", address: tuple[str, int]) -> bool:
+        """发送一个数据包
 
-    def sendMsg(self, msg: "Message", address: Tuple[str, int]) -> bool:
-        data = msg.to_bytes()
-        return bool(self.sendto(data, address))
+        Args:
+            msg (Message): 数据包
+            address (tuple[str, int]): 目标地址
 
-    def recvMsg(self) -> Tuple[Optional["Message"], Optional[Tuple[str, int]]]:
+        Returns:
+            bool: 数据是否全部发送
+        """
+        data = msg.toBytes()
+        return self.sendto(data, address) == len(data)
+
+    def recvMsg(self) -> tuple[Message, Optional[tuple[str, int]]]:
+        """接收一个数据包
+
+        Returns:
+            tuple[Message, Optional[tuple[str, int]]]: 数据包(可能为Error包或空包)，源地址
+        """
         try:
             data, from_ = self.recvfrom(65535)
         except ConnectionResetError:  # received an ICMP unreachable
-            return None, None
-        if data:
-            return Message.from_bytes(data), from_
-        else:
-            return None, None
+            return Message(ContentType.ERROR_), None
+        return Message.fromBytes(data), from_

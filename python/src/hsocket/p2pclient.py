@@ -47,7 +47,7 @@ class HTcpP2PClient:
 
     def send(self, msg: "Message") -> bool:
         try:
-            return self.__tcp_socket.sendMsg(msg)
+            self.__tcp_socket.sendMsg(msg)
         except ConnectionResetError:
             self.__message_thread.join()  # make sure that '_onDisconnected' only runs once
             if (not self.isclosed()):
@@ -55,6 +55,7 @@ class HTcpP2PClient:
                 self._onDisconnected()
                 self.close()
             return False
+        return True
 
     def __recv_handle(self):
         while not self.isclosed():

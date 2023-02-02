@@ -1,6 +1,6 @@
 ﻿#include <iostream>
-#include "../hsocket/include/HTcpSocket.h"
-#include "../hsocket/include/convert/convert.cpp"
+#include "../src/hsocket/include/hclient.h"
+#include "../src/hsocket/include/convert/convert.cpp"
 
 #ifdef _DEBUG
 #ifdef _WIN64
@@ -17,11 +17,19 @@
 #endif
 
 
+class SynTcpClientApp : public HTcpClient {
+public:
+	SynTcpClientApp() :HTcpClient(ClientMode::SYNCHRONOUS) {}
+
+	void onDisconnect() {}
+};
+
+
 int main()
 {
 	try {
-		HTcpSocket socket = HTcpSocket();
-		socket.connect("127.0.0.1", 40000);
+		SynTcpClientApp client;
+		client.connect(IPv4Address("127.0.0.1", 40000));
 		std::cout << "start" << std::endl;
 		while (true) {
 			int code = -1;
@@ -34,38 +42,36 @@ int main()
 				neb::CJsonObject json;
 				json.Add("text0", "<0>test message send by c++ client");
 				Message msg = Message::JsonMsg(0, 0, json);
-				socket.sendMsg(msg);
-				Message replyMsg = socket.recvMsg();
+				Message replyMsg = client.request(msg);
 				if (replyMsg.isValid()) {
 					std::cout << replyMsg.toString() << std::endl;
 				}}
 				  break;
 			case 100:
-				socket.sendMsg(Message::HeaderOnlyMsg(100));
-				socket.sendFile("testfile/test1.txt", "test1_by_cpp_client.txt");
+				client.sendmsg(Message::HeaderOnlyMsg(100));
+				client.sendfile("testfile/test1.txt", "test1_by_cpp_client.txt");
 				break;
 			case 101:
-				socket.sendMsg(Message::HeaderOnlyMsg(101));
-				socket.recvFile();
+				client.sendmsg(Message::HeaderOnlyMsg(101));
+				client.recvfile();
 				break;
 			case 110: {
-				socket.sendMsg(Message::HeaderOnlyMsg(110));
+				client.sendmsg(Message::HeaderOnlyMsg(110));
 				std::vector<std::string> pathlist = { "testfile/test1.txt", "testfile/test2.txt" };
 				std::vector<std::string> namelist = { "test1_by_cpp_client.txt", "test2_by_cpp_client.txt" };
-				socket.sendFiles(pathlist, namelist); }
+				client.sendfiles(pathlist, namelist); }
 					break;
 			case 111:
-				socket.sendMsg(Message::HeaderOnlyMsg(111));
-				socket.recvFiles();
+				client.sendmsg(Message::HeaderOnlyMsg(111));
+				client.recvfiles();
 				break;
 			default:
 				break;
 			}
-
 		}
 	}
-	catch (ConnectionError e) {
-		std::cout << e.what() << std::endl;
+	catch (SocketError e) {
+		std::cout << "error" << e.getErrcode() << "  " << e.what() << std::endl;
 		return 0;
 	}
 }
