@@ -4,6 +4,9 @@
 
 #define HEADER_LENGTH 10
 
+typedef unsigned short ushort;
+
+
 enum ContentType : short
 {
 	NONE = 0x0,  // 空报文
@@ -12,16 +15,15 @@ enum ContentType : short
 	PLAINTEXT = 0x3,  // 纯文本内容
 	JSONOBJRCT = 0x4,  // JSON对象
 	BINARY = 0x5,  // 二进制串
-	FT_TRANSFER_PORT = 0xF02  // 文件传输端口(statuscode: port)
 };
 
 
 #pragma pack(2)
 struct Header
 {
-	short contenttype;  // 报文内容码
-	short opcode;  // 操作码
-	short statuscode;  // 状态码
+	ushort contenttype;  // 报文内容码
+	ushort opcode;  // 操作码
+	ushort statuscode;  // 状态码
 	int length;  // 报文长度
 };
 #pragma pack()
@@ -30,14 +32,14 @@ struct Header
 class Message
 {
 private:
-	short __contenttype;  // 报文内容码
-	short __opcode;  // 操作码
-	short __statuscode;  // 状态码
+	ushort __contenttype;  // 报文内容码
+	ushort __opcode;  // 操作码
+	ushort __statuscode;  // 状态码
 	std::string __content;  // 
 	neb::CJsonObject *__json = nullptr;  //
 
 public:
-	Message(short contenttype = ContentType::NONE, short opcode = 0, short statuscode = 0, const std::string &content = "")
+	Message(ushort contenttype = ContentType::NONE, ushort opcode = 0, ushort statuscode = 0, const std::string &content = "")
 		: __contenttype(contenttype), __opcode(opcode), __statuscode(statuscode), __content(content)
 	{
 		if (!content.empty()) {
@@ -71,17 +73,17 @@ public:
 	}
 
 	/*不含正文的Message*/
-	static Message HeaderOnlyMsg(short opcode = 0, short statuscode = 0) {
+	static Message HeaderOnlyMsg(ushort opcode = 0, ushort statuscode = 0) {
 		return Message(ContentType::HEADERONLY, opcode, statuscode);
 	}
 
 	/*正文为纯文本的Message*/
-	static Message PlainTextMsg(short opcode = 0, short statuscode = 0, const std::string &text = "") {
+	static Message PlainTextMsg(ushort opcode = 0, ushort statuscode = 0, const std::string &text = "") {
 		return Message(ContentType::PLAINTEXT, opcode, statuscode, text);
 	}
 
 	/*正文为json对象的Message*/
-	static Message JsonMsg(short opcode, short statuscode, neb::CJsonObject &json) {
+	static Message JsonMsg(ushort opcode, ushort statuscode, neb::CJsonObject &json) {
 		Message msg = Message(ContentType::JSONOBJRCT, opcode, statuscode);
 		msg.__json = new neb::CJsonObject(json);
 		return msg;
@@ -93,17 +95,17 @@ public:
 	}
 
 	/*获取内容码*/
-	short contenttype() {
+	ushort contenttype() {
 		return this->__contenttype;
 	}
 
 	/*获取操作码*/
-	short opcode() {
+	ushort opcode() {
 		return this->__opcode;
 	}
 
 	/*获取状态码*/
-	short statuscode() {
+	ushort statuscode() {
 		return this->__statuscode;
 	}
 

@@ -39,6 +39,9 @@
     <ClInclude Include="include\Message.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="include\hclient.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -60,6 +63,9 @@
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="Message.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="include\hclient.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>

@@ -48,7 +48,7 @@ class HTcpClient:
         except ConnectionResetError:
             if self.__mode is ClientMode.ASYNCHRONOUS:
                 self.__message_thread.join()  # make sure that '_onDisconnected' only runs once
-            if (not self.isclosed()):
+            if not self.isclosed():
                 print("connection reset")
                 self._onDisconnected()
                 self.close()
@@ -58,7 +58,7 @@ class HTcpClient:
     def request(self, msg: Message) -> Optional[Message]:
         if self.__mode is ClientMode.ASYNCHRONOUS:
             raise RuntimeError("'request' is not available in ASYNCHRONOUS mode. Please use 'send' instead")
-        if (self.sendmsg(msg)):
+        if self.sendmsg(msg):
             try:
                 response = self.__tcp_socket.recvMsg()
             except TimeoutError:
@@ -84,6 +84,7 @@ class HTcpClient:
                     return True
         except TimeoutError:
             return False
+        return False
     
     def sendfile(self, path: str, filename: str):
         if not self._get_ft_transfer_port():
@@ -112,7 +113,7 @@ class HTcpClient:
         count_sent = 0
         with HTcpSocket() as ft_socket:
             ft_socket.connect((self.__ft_server_ip, self.__ft_server_port))
-            files_header_msg = Message.JsonMsg(0, 0, {"file_count": len(paths)})
+            files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
             ft_socket.sendMsg(files_header_msg)
             for i in range(len(paths)):
                 path = paths[i]

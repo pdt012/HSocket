@@ -8,6 +8,7 @@ from .message import *
 
 class BuiltInOpCode(IntEnum):
     FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
+    FT_SEND_FILES_HEADER = 62000 # 多文件传输时头部信息 {"file_count": 文件数}
 
 
 class _HServerSelector:
@@ -124,7 +125,7 @@ class HTcpServer:
         if len(paths) != len(filenames):
             return 0
         with self._get_ft_transfer_conn(conn) as c_socket:
-            files_header_msg = Message.JsonMsg(0, 0, {"file_count": len(paths)})
+            files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
             c_socket.sendMsg(files_header_msg)
             count_sent = 0
             for i in range(len(paths)):
