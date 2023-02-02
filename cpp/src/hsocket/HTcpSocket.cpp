@@ -96,6 +96,7 @@ std::string HTcpSocket::recvFile()
 			fout.write(data.c_str(), data.size());
 			totalRecvSize += data.size();
 		}
+		fout.close();
 		return downPath;
 	}
 	return "";
