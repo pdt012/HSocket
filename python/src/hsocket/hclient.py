@@ -20,9 +20,9 @@ class HTcpClient:
         self.__mode = mode
         if self.__mode is ClientMode.ASYNCHRONOUS:
             self.__message_thread = threading.Thread(target=self.__recv_handle, daemon=True)
-            self.__ftp_pacv_con = threading.Condition()
-        self.__ftp_server_ip = ""
-        self.__ftp_server_port = 0
+            self.__ft_pacv_con = threading.Condition()
+        self.__ft_server_ip = ""
+        self.__ft_server_port = 0
 
     def socket(self) -> HTcpSocket:
         return self.__tcp_socket
@@ -32,7 +32,7 @@ class HTcpClient:
 
     def connect(self, addr):
         self.__tcp_socket.connect(addr)
-        self.__ftp_server_ip = addr[0]
+        self.__ft_server_ip = addr[0]
         if self.__mode is ClientMode.ASYNCHRONOUS:
             self.__message_thread.start()
 
@@ -75,12 +75,12 @@ class HTcpClient:
     def _get_ft_transfer_port(self) -> bool:
         try:
             if self.__mode is ClientMode.ASYNCHRONOUS:
-                self.__ftp_pacv_con.wait()  # wait for an FTP_TRANSFER_PORT reply
+                self.__ft_pacv_con.wait()  # wait for an FT_TRANSFER_PORT reply
                 return True
             else:
                 msg = self.__tcp_socket.recvMsg()
                 if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
-                    self.__ftp_server_port = msg.get("port")
+                    self.__ft_server_port = msg.get("port")
                     return True
         except TimeoutError:
             return False
@@ -89,18 +89,18 @@ class HTcpClient:
         if not self._get_ft_transfer_port():
             return
         # send
-        with HTcpSocket() as ftp_socket:
-            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
+        with HTcpSocket() as ft_socket:
+            ft_socket.connect((self.__ft_server_ip, self.__ft_server_port))
             with open(path, 'rb') as fin:
-                ftp_socket.sendFile(fin, filename)
+                ft_socket.sendFile(fin, filename)
     
     def recvfile(self) -> str:
         if not self._get_ft_transfer_port():
             return ""
         # recv
-        with HTcpSocket() as ftp_socket:
-            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
-            down_path = ftp_socket.recvFile()
+        with HTcpSocket() as ft_socket:
+            ft_socket.connect((self.__ft_server_ip, self.__ft_server_port))
+            down_path = ft_socket.recvFile()
         return down_path
 
     def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
@@ -110,15 +110,15 @@ class HTcpClient:
             return 0
         # send
         count_sent = 0
-        with HTcpSocket() as ftp_socket:
-            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
+        with HTcpSocket() as ft_socket:
+            ft_socket.connect((self.__ft_server_ip, self.__ft_server_port))
             files_header_msg = Message.JsonMsg(0, 0, {"file_count": len(paths)})
-            ftp_socket.sendMsg(files_header_msg)
+            ft_socket.sendMsg(files_header_msg)
             for i in range(len(paths)):
                 path = paths[i]
                 filename = filenames[i]
                 with open(path, 'rb') as fin:
-                    ftp_socket.sendFile(fin, filename)
+                    ft_socket.sendFile(fin, filename)
                     count_sent += 1
         return count_sent
 
@@ -127,12 +127,12 @@ class HTcpClient:
             return []
         # recv
         down_path_list = []
-        with HTcpSocket() as ftp_socket:
-            ftp_socket.connect((self.__ftp_server_ip, self.__ftp_server_port))
-            files_header_msg = ftp_socket.recvMsg()
+        with HTcpSocket() as ft_socket:
+            ft_socket.connect((self.__ft_server_ip, self.__ft_server_port))
+            files_header_msg = ft_socket.recvMsg()
             file_count = files_header_msg.get("file_count")
             for i in range(file_count):
-                path = ftp_socket.recvFile()
+                path = ft_socket.recvFile()
                 if path:
                     down_path_list.append(path)
         return down_path_list
@@ -150,8 +150,8 @@ class HTcpClient:
                 break
             else:
                 if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
-                    self.__ftp_server_port = msg.get("port")
-                    self.__ftp_pacv_con.notify()
+                    self.__ft_server_port = msg.get("port")
+                    self.__ft_pacv_con.notify()
                     continue
                 self._messageHandle(msg)
 
