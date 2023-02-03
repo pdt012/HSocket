@@ -55,8 +55,7 @@ class _HServerSelector:
     def callback_read(self, conn: HTcpSocket):
         if not conn.isValid():
             print("not a socket")
-            self.selector.unregister(conn)
-            del self.msgs[conn]
+            self.remove(conn)
             return 
         addr = conn.getpeername()
         try:
@@ -68,9 +67,7 @@ class _HServerSelector:
             self.msgs[conn] = msg
             self.selector.modify(conn, selectors.EVENT_WRITE, self.callback_write)
         else:  # empty msg or error
-            self.selector.unregister(conn)
-            conn.close()
-            del self.msgs[conn]
+            self.remove(conn)
             print("connection closed: {}".format(addr))
             self.onDisconnected(addr)  # disconnect callback
 
@@ -79,10 +76,14 @@ class _HServerSelector:
         if msg:
             self.messageHandle(conn, msg)
             self.msgs[conn] = None
+        if not conn.isValid():  # may be disconnected in messageHandle
+            self.remove(conn)
+            return
         self.selector.modify(conn, selectors.EVENT_READ, self.callback_read)
 
     def remove(self, conn: HTcpSocket):
         self.selector.unregister(conn)
+        del self.msgs[conn]
 
 
 class HTcpServer:
@@ -98,7 +99,7 @@ class HTcpServer:
         self.__selector.stop()
 
     def closeconn(self, conn: HTcpSocket):
-        self.__selector.remove(conn)
+        """主动关闭一个连接，不会触发onDisconnected"""
         conn.close()
 
     def _get_ft_transfer_conn(self, conn: HTcpSocket) -> HTcpSocket:
@@ -112,39 +113,51 @@ class HTcpServer:
             return c_socket
 
     def sendfile(self, conn: HTcpSocket, path: str, filename: str):
-        with self._get_ft_transfer_conn(conn) as c_socket:
-            with open(path, 'rb') as fin:
-                c_socket.sendFile(fin, filename)
+        try:
+            with self._get_ft_transfer_conn(conn) as c_socket:
+                with open(path, 'rb') as fin:
+                    c_socket.sendFile(fin, filename)
+        except OSError:
+            return
 
     def recvfile(self, conn: HTcpSocket) -> str:
-        with self._get_ft_transfer_conn(conn) as c_socket:
-            down_path = c_socket.recvFile()
-            return down_path
+        try:
+            with self._get_ft_transfer_conn(conn) as c_socket:
+                down_path = c_socket.recvFile()
+                return down_path
+        except OSError:
+            return ""
 
     def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
         if len(paths) != len(filenames):
             return 0
-        with self._get_ft_transfer_conn(conn) as c_socket:
-            files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
-            c_socket.sendMsg(files_header_msg)
-            count_sent = 0
-            for i in range(len(paths)):
-                path = paths[i]
-                filename = filenames[i]
-                with open(path, 'rb') as fin:
-                    c_socket.sendFile(fin, filename)
-                    count_sent += 1
+        count_sent = 0
+        try:
+            with self._get_ft_transfer_conn(conn) as c_socket:
+                files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
+                c_socket.sendMsg(files_header_msg)
+                for i in range(len(paths)):
+                    path = paths[i]
+                    filename = filenames[i]
+                    with open(path, 'rb') as fin:
+                        c_socket.sendFile(fin, filename)
+                        count_sent += 1
+                return count_sent
+        except OSError:
             return count_sent
 
     def recvfiles(self, conn: HTcpSocket) -> list[str]:
-        with self._get_ft_transfer_conn(conn) as c_socket:
-            files_header_msg = c_socket.recvMsg()
-            file_count = files_header_msg.get("file_count")
-            down_path_list = []
-            for i in range(file_count):
-                path = c_socket.recvFile()
-                if path:
-                    down_path_list.append(path)
+        down_path_list = []
+        try:
+            with self._get_ft_transfer_conn(conn) as c_socket:
+                files_header_msg = c_socket.recvMsg()
+                file_count = files_header_msg.get("file_count")
+                for i in range(file_count):
+                    path = c_socket.recvFile()
+                    if path:
+                        down_path_list.append(path)
+                return down_path_list
+        except OSError:
             return down_path_list
 
     @abstractmethod
