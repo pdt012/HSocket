@@ -29,7 +29,7 @@ public:
 	virtual void close();
 
 	virtual bool isClosed() {
-		return tcpSocket.isValid();
+		return !tcpSocket.isValid();
 	}
 
 	virtual bool sendmsg(const Message &msg) = 0;
@@ -70,7 +70,7 @@ private:
 protected:
 	bool getFTTransferPort() override;
 
-	virtual void onMessageReceived(const Message &msg) abstract;
+	virtual void onMessageReceived(Message &msg) abstract;
 };
 
 

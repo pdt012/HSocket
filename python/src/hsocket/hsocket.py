@@ -17,7 +17,7 @@ class _HSocket(socket.socket):
         super().__init__(family, type_, proto, fileno)
 
     def isValid(self) -> bool:
-        return self.fileno != -1
+        return self.fileno() != -1
 
 
 class HTcpSocket(_HSocket):
