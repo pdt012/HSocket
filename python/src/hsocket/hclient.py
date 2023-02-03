@@ -42,19 +42,25 @@ class _HTcpClient:
         if not self._get_ft_transfer_port():
             return
         # send
-        with HTcpSocket() as ft_socket:
-            ft_socket.connect((self._ft_server_ip, self._ft_server_port))
-            with open(path, 'rb') as fin:
-                ft_socket.sendFile(fin, filename)
+        try:
+            with HTcpSocket() as ft_socket:
+                ft_socket.connect((self._ft_server_ip, self._ft_server_port))
+                with open(path, 'rb') as fin:
+                    ft_socket.sendFile(fin, filename)
+        except OSError:
+            return
 
     def recvfile(self) -> str:
         if not self._get_ft_transfer_port():
             return ""
         # recv
-        with HTcpSocket() as ft_socket:
-            ft_socket.connect((self._ft_server_ip, self._ft_server_port))
-            down_path = ft_socket.recvFile()
-        return down_path
+        try:
+            with HTcpSocket() as ft_socket:
+                ft_socket.connect((self._ft_server_ip, self._ft_server_port))
+                down_path = ft_socket.recvFile()
+            return down_path
+        except OSError:
+            return ""
 
     def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
         if not self._get_ft_transfer_port():
@@ -63,32 +69,38 @@ class _HTcpClient:
             return 0
         # send
         count_sent = 0
-        with HTcpSocket() as ft_socket:
-            ft_socket.connect((self._ft_server_ip, self._ft_server_port))
-            files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
-            ft_socket.sendMsg(files_header_msg)
-            for i in range(len(paths)):
-                path = paths[i]
-                filename = filenames[i]
-                with open(path, 'rb') as fin:
-                    ft_socket.sendFile(fin, filename)
-                    count_sent += 1
-        return count_sent
+        try:
+            with HTcpSocket() as ft_socket:
+                ft_socket.connect((self._ft_server_ip, self._ft_server_port))
+                files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
+                ft_socket.sendMsg(files_header_msg)
+                for i in range(len(paths)):
+                    path = paths[i]
+                    filename = filenames[i]
+                    with open(path, 'rb') as fin:
+                        ft_socket.sendFile(fin, filename)
+                        count_sent += 1
+            return count_sent
+        except OSError:
+            return count_sent
 
     def recvfiles(self) -> list[str]:
         if not self._get_ft_transfer_port():
             return []
         # recv
         down_path_list = []
-        with HTcpSocket() as ft_socket:
-            ft_socket.connect((self._ft_server_ip, self._ft_server_port))
-            files_header_msg = ft_socket.recvMsg()
-            file_count = files_header_msg.get("file_count")
-            for i in range(file_count):
-                path = ft_socket.recvFile()
-                if path:
-                    down_path_list.append(path)
-        return down_path_list
+        try:
+            with HTcpSocket() as ft_socket:
+                ft_socket.connect((self._ft_server_ip, self._ft_server_port))
+                files_header_msg = ft_socket.recvMsg()
+                file_count = files_header_msg.get("file_count")
+                for i in range(file_count):
+                    path = ft_socket.recvFile()
+                    if path:
+                        down_path_list.append(path)
+            return down_path_list
+        except OSError:
+            return down_path_list
 
     def _onDisconnected(self):
         pass
@@ -117,11 +129,8 @@ class HTcpChannelClient(_HTcpClient):
         return True
 
     def _get_ft_transfer_port(self) -> bool:
-        try:
-            self.__con_ft_port.wait()  # wait for an FT_TRANSFER_PORT reply
-            return True
-        except TimeoutError:
-            return False
+        success = self.__con_ft_port.wait()  # wait for an FT_TRANSFER_PORT reply
+        return success
 
     def __message_handle(self):
         while not self.isclosed():
@@ -161,20 +170,20 @@ class HTcpReqResClient(_HTcpClient):
             return False
         return True
 
-    def request(self, msg: Message) -> Optional[Message]:
+    def request(self, msg: Message) -> Message:
         if self.sendmsg(msg):
             try:
                 response = self._tcp_socket.recvMsg()
             except TimeoutError:
-                return None
+                return Message(ContentType.ERROR_)
             except ConnectionResetError:
                 print("connection reset")
                 self._onDisconnected()
                 self.close()
-                return None
+                return Message(ContentType.ERROR_)
             else:
                 return response
-        return None
+        return Message(ContentType.ERROR_)
 
     def _get_ft_transfer_port(self) -> bool:
         try:
@@ -182,9 +191,10 @@ class HTcpReqResClient(_HTcpClient):
             if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
                 self._ft_server_port = msg.get("port")
                 return True
-        except TimeoutError:
+            else:
+                return False
+        except OSError:
             return False
-        return False
 
 
 class _HUdpClient:

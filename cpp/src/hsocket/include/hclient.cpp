@@ -24,9 +24,13 @@ void HTcpClient::sendfile(std::string path, std::string filename)
 		return;
 	// send
 	HTcpSocket ftSocket;
-	ftSocket.connect(ftServerIp.c_str(), ftServerPort);
-	std::ifstream fin(path, std::ios::binary | std::ios::in);
-	ftSocket.sendFile(fin, filename);
+	std::ifstream fin;
+	try {
+		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
+		fin = std::ifstream(path, std::ios::binary | std::ios::in);
+		ftSocket.sendFile(fin, filename);
+	}
+	catch (SocketError e) {}
 	fin.close();
 	ftSocket.close();
 }
@@ -37,8 +41,12 @@ std::string HTcpClient::recvfile()
 		return "";
 	// recv
 	HTcpSocket ftSocket;
-	ftSocket.connect(ftServerIp.c_str(), ftServerPort);
-	std::string downPath = ftSocket.recvFile();
+	std::string downPath = "";
+	try {
+		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
+		downPath = ftSocket.recvFile();
+	}
+	catch (SocketError e) {}
 	ftSocket.close();
 	return downPath;
 }
@@ -52,19 +60,28 @@ int HTcpClient::sendfiles(std::vector<std::string> paths, std::vector<std::strin
 	// send
 	int countSent = 0;
 	HTcpSocket ftSocket;
-	ftSocket.connect(ftServerIp.c_str(), ftServerPort);
-	neb::CJsonObject json;
-	json.Add("file_count", paths.size());
-	Message filesHeaderMsg = Message::JsonMsg(BuiltInOpCode::FT_SEND_FILES_HEADER, 0, json);
-	ftSocket.sendMsg(filesHeaderMsg);
-	for (int i = 0; i < paths.size(); i++) {
-		std::string path = paths[i];
-		std::string filename = filenames[i];
-		std::ifstream fin(path, std::ios::binary | std::ios::in);
-		ftSocket.sendFile(fin, filename);
-		countSent++;
-		fin.close();
+	try {
+		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
+		neb::CJsonObject json;
+		json.Add("file_count", paths.size());
+		Message filesHeaderMsg = Message::JsonMsg(BuiltInOpCode::FT_SEND_FILES_HEADER, 0, json);
+		ftSocket.sendMsg(filesHeaderMsg);
+		for (int i = 0; i < paths.size(); i++) {
+			std::string path = paths[i];
+			std::string filename = filenames[i];
+			std::ifstream fin(path, std::ios::binary | std::ios::in);
+			try {
+				ftSocket.sendFile(fin, filename);
+				countSent++;
+				fin.close();
+			}
+			catch (SocketError e) {
+				fin.close();
+				break;
+			}
+		}
 	}
+	catch (SocketError e) {}
 	ftSocket.close();
 	return countSent;
 }
@@ -76,14 +93,22 @@ std::vector<std::string> HTcpClient::recvfiles()
 	// recv
 	std::vector<std::string> downPathList;
 	HTcpSocket ftSocket;
-	ftSocket.connect(ftServerIp.c_str(), ftServerPort);
-	Message filesHeaderMsg = ftSocket.recvMsg();
-	int fileCount = filesHeaderMsg.getInt("file_count");
-	for (int i = 0; i < fileCount; i++) {
-		std::string path = ftSocket.recvFile();
-		if (!path.empty())
-			downPathList.push_back(path);
+	try {
+		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
+		Message filesHeaderMsg = ftSocket.recvMsg();
+		int fileCount = filesHeaderMsg.getInt("file_count");
+		for (int i = 0; i < fileCount; i++) {
+			try {
+				std::string path = ftSocket.recvFile();
+				if (!path.empty())
+					downPathList.push_back(path);
+			}
+			catch (SocketError e) {
+				break;
+			}
+		}
 	}
+	catch (SocketError e) {}
 	ftSocket.close();
 	return downPathList;
 }
@@ -141,15 +166,12 @@ void HTcpChannelClient::messageHandle()
 
 bool HTcpChannelClient::getFTTransferPort()
 {
-	try {
-		std::unique_lock<std::mutex> ulock(mtxFTPort);
-		conFTPort.wait(ulock);
+	std::unique_lock<std::mutex> ulock(mtxFTPort);
+	std::cv_status status = conFTPort.wait_for(ulock, std::chrono::seconds(15));
+	if (status == std::cv_status::no_timeout)
 		return true;
-	}
-	catch (SocketError e) {
+	else
 		return false;
-	}
-	return false;
 }
 
 
@@ -197,9 +219,10 @@ bool HTcpReqResClient::getFTTransferPort()
 			ftServerPort = msg.getInt("port");
 			return true;
 		}
+		else
+			return false;
 	}
 	catch (SocketError e) {
 		return false;
 	}
-	return false;
 }
