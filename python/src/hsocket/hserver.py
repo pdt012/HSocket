@@ -56,7 +56,7 @@ class _HServerSelector:
         if not conn.isValid():
             print("not a socket")
             self.remove(conn)
-            return 
+            return
         addr = conn.getpeername()
         try:
             msg = conn.recvMsg()  # receive msg
@@ -181,18 +181,16 @@ class HUdpServer:
     def startserver(self, addr):
         self.__udp_socket = HUdpSocket()
         self.__udp_socket.bind(addr)
-        while True:
-            if self.__udp_socket.fileno == -1:
-                break
+        while self.__udp_socket.isValid():
             msg, from_ = self.__udp_socket.recvMsg()
             self._messageHandle(msg, from_)
-    
+
     def closeserver(self):
         self.__udp_socket.close()
 
     def sendto(self, msg: Message, c_addr):
         self.__udp_socket.sendMsg(msg, c_addr)
-    
+
     @abstractmethod
     def _messageHandle(self, msg: Message, c_addr):
         ...
