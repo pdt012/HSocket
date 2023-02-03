@@ -3,6 +3,7 @@ from typing import Optional, Union, Any, Self
 from enum import IntEnum
 import json
 
+
 class ContentType(IntEnum):
     NONE = 0x0  # 空报文
     ERROR_ = 0x1  # 错误报文
@@ -20,11 +21,11 @@ class Header:
     HEADER_LENGTH = 10
 
     def __init__(self, contenttype, opcode, statuscode, length):
-        self.contenttype: int = contenttype  # 报文内容码
+        self.contenttype: ContentType = contenttype  # 报文内容码
         self.opcode: int = opcode  # 操作码
         self.statuscode: int = statuscode  # 状态码
         self.length: int = length  # 报文长度
-    
+
     def toBytes(self) -> bytes:
         """转换为二进制流"""
         header = b""
@@ -50,13 +51,14 @@ class Header:
 
 
 class Message:
-    def __init__(self, contenttype: ContentType = ContentType.NONE, opcode: int = 0, statuscode: int = 0, content: Union[str, bytes] = ""):
+    def __init__(self, contenttype: ContentType = ContentType.NONE, opcode: int = 0, statuscode: int = 0,
+                 content: Union[str, bytes] = ""):
         self.__contenttype: int = contenttype  # 报文内容码
         self.__opcode: int = opcode  # 操作码
         self.__statuscode: int = statuscode  # 响应码
         self.__content: Union[str, bytes] = ""
         self.__json: dict = {}
-        
+
         if content:
             match self.__contenttype:
                 case ContentType.HEADERONLY:
@@ -70,7 +72,7 @@ class Message:
                     self.__content = content
                 case _:
                     raise ValueError("content does not match ContentType")
-    
+
     @classmethod
     def HeaderContent(cls, header: Header, content: Union[str, bytes]) -> Self:
         """由Header和正文内容组成Message"""
@@ -84,14 +86,14 @@ class Message:
         """不含正文的Message"""
         msg = Message(ContentType.HEADERONLY, opcode, statuscode)
         return msg
-        
+
     @classmethod
     def PlainTextMsg(cls, opcode: int = 0, statuscode: int = 0, text: str = "") -> Self:
         """正文为纯文本的Message"""
         msg = Message(ContentType.PLAINTEXT, opcode, statuscode)
         msg.__content = text
         return msg
-        
+
     @classmethod
     def JsonMsg(cls, opcode: int = 0, statuscode: int = 0, dict_: dict = None, **kw) -> Self:
         """正文为json对象的Message
@@ -140,7 +142,7 @@ class Message:
     def contenttype(self) -> int:
         """获取内容码"""
         return self.__contenttype
-        
+
     def opcode(self) -> int:
         """获取操作码"""
         return self.__opcode
@@ -148,7 +150,7 @@ class Message:
     def statuscode(self) -> int:
         """获取状态码"""
         return self.__statuscode
-        
+
     def toBytes(self) -> bytes:
         """转换为二进制流
 
@@ -175,7 +177,7 @@ class Message:
         if len(data) < Header.HEADER_LENGTH:
             return Message()
         header = Header.fromBytes(data[0:Header.HEADER_LENGTH])
-        if header == None:
+        if header is None:
             return Message()
         if header.contenttype == ContentType.BINARY:
             msg = Message.HeaderContent(header, data[Header.HEADER_LENGTH:])
@@ -186,6 +188,6 @@ class Message:
     def __str__(self):
         return (f"pro:{self.__contenttype}  op:{self.__opcode}  sta:{self.__statuscode}\n"
                 f"content:\n{self.__content}")
-    
+
     def __repr__(self):
         return str(self)

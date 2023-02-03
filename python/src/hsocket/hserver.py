@@ -8,7 +8,7 @@ from .message import *
 
 class BuiltInOpCode(IntEnum):
     FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
-    FT_SEND_FILES_HEADER = 62000 # 多文件传输时头部信息 {"file_count": 文件数}
+    FT_SEND_FILES_HEADER = 62000  # 多文件传输时头部信息 {"file_count": 文件数}
 
 
 class _HServerSelector:
@@ -16,11 +16,10 @@ class _HServerSelector:
         self.messageHandle = messageHandle
         self.onDisconnected = onDisconnected
         self.onConnected = onConnected
-        self.server_socket: HTcpSocket = None
+        self.server_socket = HTcpSocket()
         self.msgs: dict[HTcpSocket, Message] = {}
 
     def start(self, addr, backlog=10):
-        self.server_socket = HTcpSocket()
         self.server_socket.bind(addr)
         self.server_socket.setblocking(False)
         self.server_socket.listen(backlog)
@@ -173,13 +172,12 @@ class HTcpServer:
 
 class HUdpServer:
     def __init__(self):
-        self.__udp_socket: HUdpSocket = None
+        self.__udp_socket = HUdpSocket()
 
     def socket(self) -> HUdpSocket:
         return self.__udp_socket
 
     def startserver(self, addr):
-        self.__udp_socket = HUdpSocket()
         self.__udp_socket.bind(addr)
         while self.__udp_socket.isValid():
             msg, from_ = self.__udp_socket.recvMsg()

@@ -23,7 +23,7 @@ class _HSocket(socket.socket):
 class HTcpSocket(_HSocket):
     def __init__(self, family=socket.AF_INET, fileno=None):
         super().__init__(family, socket.SOCK_STREAM, fileno=fileno)
-    
+
     def accept(self) -> tuple["HTcpSocket", tuple[str, int]]:
         # Paraphrased from socket.socket.accept()
         fd, addr = self._accept()
