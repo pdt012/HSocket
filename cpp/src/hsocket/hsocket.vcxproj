@@ -170,9 +170,9 @@
     <ClInclude Include="include\util.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="hclient.cpp" />
     <ClCompile Include="HTcpSocket.cpp" />
     <ClCompile Include="HUdpSocket.cpp" />
-    <ClCompile Include="include\hclient.cpp" />
     <ClCompile Include="IPv4Address.cpp" />
     <ClCompile Include="Message.cpp" />
     <ClCompile Include="pch.cpp">

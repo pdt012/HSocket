@@ -65,7 +65,7 @@
     <ClCompile Include="Message.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="include\hclient.cpp">
+    <ClCompile Include="hclient.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
   </ItemGroup>
