@@ -17,11 +17,11 @@
 #endif
 
 
-class SynTcpClientApp : public HTcpClient {
+class SynTcpClientApp : public HTcpReqResClient {
 public:
-	SynTcpClientApp() :HTcpClient(ClientMode::SYNCHRONOUS) {}
+	SynTcpClientApp() :HTcpReqResClient() {}
 
-	void onDisconnect() {}
+	void onDisconnected() {}
 };
 
 

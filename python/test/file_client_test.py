@@ -1,14 +1,14 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.append("..")
-from src.hsocket.hclient import HTcpClient, ClientMode
+from src.hsocket.hclient import HTcpReqResClient
 from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-class SynTcpClientApp(HTcpClient):
+class SynTcpClientApp(HTcpReqResClient):
     def __init__(self):
-        super().__init__(ClientMode.SYNCHRONOUS)
+        super().__init__()
 
     def _onDisconnected(self):
         return super()._onDisconnected()

@@ -1,16 +1,16 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.append("..")
-from src.hsocket.hclient import HUdpClient, ClientMode
+from src.hsocket.hclient import HUdpChannelClient
 from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-class AsynUdpClientApp(HUdpClient):
+class AsynUdpClientApp(HUdpChannelClient):
     def __init__(self, addr):
-        super().__init__(addr, ClientMode.ASYNCHRONOUS)
+        super().__init__(addr)
 
-    def _messageHandle(self, msg: "Message"):
+    def _onMessageReceived(self, msg: "Message"):
         print('msg: ',msg)
 
 

@@ -10,42 +10,29 @@ enum BuiltInOpCode : unsigned short {
 };
 
 
-enum ClientMode {
-	SYNCHRONOUS,
-	ASYNCHRONOUS
-};
-
-
 class HTcpClient abstract
 {
-private:
+protected:
 	HTcpSocket tcpSocket;
-	ClientMode mode;
 	std::string ftServerIp = "";
 	int ftServerPort = 0;
-	std::thread thMessage;
-	std::mutex mtxFTPort;
-	std::condition_variable conFTPort;
 
 public:
-
-	HTcpClient(ClientMode mode);
+	HTcpClient();
 
 	HTcpSocket socket() {
 		return tcpSocket;
 	}
 
-	void connect(IPv4Address addr);
+	virtual void connect(IPv4Address addr);
 
-	void close();
+	virtual void close();
 
-	bool isClosed() {
+	virtual bool isClosed() {
 		return tcpSocket.isValid();
 	}
 
-	bool sendmsg(const Message &msg);
-
-	Message request(const Message &msg);
+	virtual bool sendmsg(const Message &msg) = 0;
 
 	void sendfile(std::string path, std::string filename);
 
@@ -54,12 +41,48 @@ public:
 	int sendfiles(std::vector<std::string> paths, std::vector<std::string> filenames);
 
 	std::vector<std::string> recvfiles();
+
+protected:
+	virtual bool getFTTransferPort() = 0;
+
+protected:
+	virtual void onDisconnected() abstract;
+};
+
+
+class HTcpChannelClient abstract : public HTcpClient
+{
 private:
-	bool getFTTransferPort();
+	std::thread thMessage;
+	std::mutex mtxFTPort;
+	std::condition_variable conFTPort;
 
-	void recvHandle();
 public:
-	void messageHandle(const Message &msg) {};
+	HTcpChannelClient();
 
-	virtual void onDisconnect() abstract;
+	void connect(IPv4Address addr) override;
+
+	bool sendmsg(const Message &msg) override;
+
+private:
+	void messageHandle();
+
+protected:
+	bool getFTTransferPort() override;
+
+	virtual void onMessageReceived(const Message &msg) abstract;
+};
+
+
+class HTcpReqResClient abstract : public HTcpClient
+{
+public:
+	HTcpReqResClient();
+
+	bool sendmsg(const Message &msg) override;
+
+	Message request(const Message &msg);
+
+protected:
+	bool getFTTransferPort() override;
 };

@@ -2,8 +2,7 @@
 #include "hclient.h"
 #include <fstream>
 
-HTcpClient::HTcpClient(ClientMode mode)
-	: mode(mode)
+HTcpClient::HTcpClient()
 {
 	tcpSocket.setblocking(true);
 }
@@ -12,49 +11,11 @@ void HTcpClient::connect(IPv4Address addr)
 {
 	tcpSocket.connect(addr.ip.c_str(), addr.port);
 	ftServerIp = addr.ip;
-	if (mode == ClientMode::ASYNCHRONOUS) {
-		thMessage = std::thread(&HTcpClient::recvHandle, this);
-	}
 }
 
 void HTcpClient::close()
 {
 	tcpSocket.close();
-}
-
-bool HTcpClient::sendmsg(const Message &msg)
-{
-	try {
-		tcpSocket.sendMsg(msg);
-	}
-	catch (SocketError e) {
-		if (mode == ClientMode::ASYNCHRONOUS)
-			thMessage.join();  // make sure that 'onDisconnected' only runs once
-		if (!isClosed()) {
-			this->onDisconnect();
-			this->close();
-		}
-		return false;
-	}
-	return true;
-}
-
-Message HTcpClient::request(const Message &msg)
-{
-	if (mode == ClientMode::ASYNCHRONOUS)
-		throw std::runtime_error("'request' is not available in ASYNCHRONOUS mode. Please use 'send' instead");
-	if (this->sendmsg(msg)) {
-		try {
-			Message response = tcpSocket.recvMsg();
-			return response;
-		}
-		catch (SocketError e) {
-			this->onDisconnect();
-			this->close();
-			return Message(ContentType::ERROR_);
-		}
-	}
-	return Message(ContentType::ERROR_);
 }
 
 void HTcpClient::sendfile(std::string path, std::string filename)
@@ -127,29 +88,35 @@ std::vector<std::string> HTcpClient::recvfiles()
 	return downPathList;
 }
 
-bool HTcpClient::getFTTransferPort()
+
+HTcpChannelClient::HTcpChannelClient()
+	: HTcpClient()
 {
-	try {
-		if (mode == ClientMode::ASYNCHRONOUS) {
-			std::unique_lock<std::mutex> ulock(mtxFTPort);
-			conFTPort.wait(ulock);
-			return true;
-		}
-		else {
-			Message msg = tcpSocket.recvMsg();
-			if (msg.opcode() == BuiltInOpCode::FT_TRANSFER_PORT) {
-				ftServerPort = msg.getInt("port");
-				return true;
-			}
-		}
-	}
-	catch (SocketError e) {
-		return false;
-	}
-	return false;
 }
 
-void HTcpClient::recvHandle()
+void HTcpChannelClient::connect(IPv4Address addr)
+{
+	HTcpClient::connect(addr);
+	thMessage = std::thread(&HTcpChannelClient::messageHandle, this);
+}
+
+bool HTcpChannelClient::sendmsg(const Message &msg)
+{
+	try {
+		tcpSocket.sendMsg(msg);
+	}
+	catch (SocketError e) {
+		thMessage.join();  // make sure that 'onDisconnected' only runs once
+		if (!isClosed()) {
+			this->onDisconnected();
+			this->close();
+		}
+		return false;
+	}
+	return true;
+}
+
+void HTcpChannelClient::messageHandle()
 {
 	while (!this->isClosed()) {
 		try {
@@ -159,15 +126,80 @@ void HTcpClient::recvHandle()
 				conFTPort.notify_one();
 				continue;
 			}
-			this->messageHandle(msg);
+			this->onMessageReceived(msg);
 		}
 		catch (SocketError e) {
 			if (e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK) {
 				continue;
 			}
-			this->onDisconnect();
+			this->onDisconnected();
 			this->close();
 			break;
 		}
 	}
+}
+
+bool HTcpChannelClient::getFTTransferPort()
+{
+	try {
+		std::unique_lock<std::mutex> ulock(mtxFTPort);
+		conFTPort.wait(ulock);
+		return true;
+	}
+	catch (SocketError e) {
+		return false;
+	}
+	return false;
+}
+
+
+HTcpReqResClient::HTcpReqResClient()
+	: HTcpClient()
+{
+}
+
+bool HTcpReqResClient::sendmsg(const Message &msg)
+{
+	try {
+		tcpSocket.sendMsg(msg);
+	}
+	catch (SocketError e) {
+		if (!isClosed()) {
+			this->onDisconnected();
+			this->close();
+		}
+		return false;
+	}
+	return true;
+}
+
+Message HTcpReqResClient::request(const Message &msg)
+{
+	if (this->sendmsg(msg)) {
+		try {
+			Message response = tcpSocket.recvMsg();
+			return response;
+		}
+		catch (SocketError e) {
+			this->onDisconnected();
+			this->close();
+			return Message(ContentType::ERROR_);
+		}
+	}
+	return Message(ContentType::ERROR_);
+}
+
+bool HTcpReqResClient::getFTTransferPort()
+{
+	try {
+		Message msg = tcpSocket.recvMsg();
+		if (msg.opcode() == BuiltInOpCode::FT_TRANSFER_PORT) {
+			ftServerPort = msg.getInt("port");
+			return true;
+		}
+	}
+	catch (SocketError e) {
+		return false;
+	}
+	return false;
 }
