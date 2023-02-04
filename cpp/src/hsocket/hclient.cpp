@@ -167,7 +167,7 @@ void HTcpChannelClient::messageHandle()
 bool HTcpChannelClient::getFTTransferPort()
 {
 	std::unique_lock<std::mutex> ulock(mtxFTPort);
-	std::cv_status status = conFTPort.wait_for(ulock, std::chrono::seconds(15));
+	std::cv_status status = conFTPort.wait_for(ulock, std::chrono::seconds(ftTimeout));
 	if (status == std::cv_status::no_timeout)
 		return true;
 	else

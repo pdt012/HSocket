@@ -95,6 +95,7 @@ class HTcpServer:
     def __init__(self):
         self.__ip: str = ""
         self.__selector = _HServerSelector(self._messageHandle, self._onConnected, self._onDisconnected)
+        self.__ft_timeout = 15
 
     def startserver(self, addr):
         self.__ip = addr[0]
@@ -107,12 +108,15 @@ class HTcpServer:
         """主动关闭一个连接，不会触发onDisconnected"""
         conn.close()
 
+    def set_ft_timeout(self, sec):
+        self.__ft_timeout = sec
+
     def _get_ft_transfer_conn(self, conn: HTcpSocket) -> HTcpSocket:
         with HTcpSocket() as ft_socket:
             ft_socket.bind((self.__ip, 0))
             port = ft_socket.getsockname()[1]
             conn.sendMsg(Message.JsonMsg(BuiltInOpCode.FT_TRANSFER_PORT, port=port))
-            ft_socket.settimeout(15)
+            ft_socket.settimeout(self.__ft_timeout)
             ft_socket.listen(1)
             c_socket, c_addr = ft_socket.accept()
             return c_socket

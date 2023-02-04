@@ -111,6 +111,7 @@ class HTcpChannelClient(_HTcpClient):
         super().__init__()
         self.__th_message = threading.Thread(target=self.__message_handle, daemon=True)
         self.__con_ft_port = threading.Condition()
+        self.__ft_timeout = 15
 
     def connect(self, addr):
         super().connect(addr)
@@ -128,8 +129,11 @@ class HTcpChannelClient(_HTcpClient):
             return False
         return True
 
+    def set_ft_timeout(self, sec):
+        self.__ft_timeout = sec
+
     def _get_ft_transfer_port(self) -> bool:
-        success = self.__con_ft_port.wait()  # wait for an FT_TRANSFER_PORT reply
+        success = self.__con_ft_port.wait(self.__ft_timeout)  # wait for an FT_TRANSFER_PORT reply
         return success
 
     def __message_handle(self):

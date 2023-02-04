@@ -56,6 +56,7 @@ private:
 	std::thread thMessage;
 	std::mutex mtxFTPort;
 	std::condition_variable conFTPort;
+	int ftTimeout = 15;
 
 public:
 	HTcpChannelClient();
@@ -63,6 +64,10 @@ public:
 	void connect(IPv4Address addr) override;
 
 	bool sendmsg(const Message &msg) override;
+
+    void setFTTimeout(self, sec) {
+        ftTimeout = sec;
+	}
 
 private:
 	void messageHandle();
