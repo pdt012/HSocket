@@ -18,6 +18,7 @@ class _HServerSelector:
         self.onConnected = onConnected
         self.server_socket = HTcpSocket()
         self.msgs: dict[HTcpSocket, Message] = {}
+        self.running = False
 
     def start(self, addr, backlog=10):
         self.server_socket.bind(addr)
@@ -28,13 +29,18 @@ class _HServerSelector:
         self.selector.register(self.server_socket, selectors.EVENT_READ, self.callback_accept)
 
         print("server start at {}".format(addr))
-        while True:
+        self.running = True
+        self.run()
+
+    def run(self):
+        while self.running:
             events = self.selector.select()
             for key, mask in events:
                 callback = key.data
                 callback(key.fileobj)
 
     def stop(self):
+        self.running = False
         fobj_list = []
         for fd, key in self.selector.get_map().items():
             fobj_list.append(key.fileobj)
