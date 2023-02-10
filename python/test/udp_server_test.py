@@ -10,11 +10,11 @@ class UdpServerApp(HUdpServer):
     def _messageHandle(self, msg: "Message", c_addr):
         match msg.opcode():
             case 0:
-                text = msg.get("text0")
+                text = msg.get("text")
                 print(c_addr, text)
                 self.sendto(Message.JsonMsg(0, 1, reply="hello 0"), c_addr)
             case 1:
-                text = msg.get("text1")
+                text = msg.get("text")
                 print(c_addr, text)
                 self.sendto(Message.JsonMsg(0, 1, reply="hello 1"), c_addr)
             case _:

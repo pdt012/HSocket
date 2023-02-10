@@ -27,8 +27,8 @@ class TcpServerApp(HTcpServer):
             case _:
                 pass
 
-    def _onDisconnected(self, addr):
-        return super()._onDisconnected(addr)
+    def _onDisconnected(self, conn, addr):
+        return super()._onDisconnected(conn, addr)
 
 
 if __name__ == '__main__':

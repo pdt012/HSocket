@@ -59,6 +59,7 @@ class _HServerSelector:
 
     def callback_read(self, conn: HTcpSocket):
         if not conn.isValid():
+            # 主动关闭连接后会进入以下代码段
             print("not a socket")
             self.remove(conn)
             return
@@ -73,19 +74,22 @@ class _HServerSelector:
             self.selector.modify(conn, selectors.EVENT_WRITE, self.callback_write)
         else:  # empty msg or error
             self.remove(conn)
-            print("connection closed: {}".format(addr))
-            self.onDisconnected(addr)  # disconnect callback
+            print("connection closed (read): {}".format(addr))
+            self.onDisconnected(conn, addr)  # disconnect callback
 
     def callback_write(self, conn: HTcpSocket):
+        addr = conn.getpeername()
         msg = self.msgs[conn]
         if msg:
             self.messageHandle(conn, msg)
             self.msgs[conn] = None
-        if not conn.isValid():  # may be disconnected in messageHandle
+        if conn.isValid():  # may be disconnected in messageHandle
+            self.selector.modify(conn, selectors.EVENT_READ, self.callback_read)
+        else:
+            # 主动关闭连接后会进入以下代码段
             self.remove(conn)
-            return
-        self.selector.modify(conn, selectors.EVENT_READ, self.callback_read)
-
+            print("connection closed (write): {}".format(addr))
+    
     def remove(self, conn: HTcpSocket):
         self.selector.unregister(conn)
         del self.msgs[conn]
@@ -105,8 +109,13 @@ class HTcpServer:
         self.__selector.stop()
 
     def closeconn(self, conn: HTcpSocket):
-        """主动关闭一个连接，不会触发onDisconnected"""
+        """主动关闭一个连接
+
+        如果直接使用 conn.close() 则会导致不触发 onDisconnected 回调.
+        """
+        addr = conn.getpeername()
         conn.close()
+        self._onDisconnected(conn, addr)
 
     def set_ft_timeout(self, sec):
         self.__ft_timeout = sec
@@ -176,7 +185,7 @@ class HTcpServer:
     def _onConnected(self, conn: HTcpSocket, addr):
         pass
 
-    def _onDisconnected(self, addr):
+    def _onDisconnected(self, conn: HTcpSocket, addr):
         pass
 
 

@@ -4,6 +4,8 @@ sys.path.append("..")
 from src.hsocket.hserver import HTcpServer
 from src.hsocket.hsocket import HTcpSocket, Message
 from traceback import print_exc
+from threading import Thread
+from time import sleep
 
 
 class TcpServerApp(HTcpServer):
@@ -11,17 +13,31 @@ class TcpServerApp(HTcpServer):
         addr = conn.getpeername()
         match msg.opcode():
             case 0:
-                text = msg.get("text0")
+                text = msg.get("text")
                 print(addr, text)
                 conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 0"))
             case 1:
-                text = msg.get("text1")
+                text = msg.get("text")
                 print(addr, text)
                 conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 1"))
+            case 990:
+                # 主动断开连接
+                print("主动断开连接")
+                self.closeconn(conn)
+            case 991:
+                # 新的线程中主动断开连接
+                def disconnect_conn():
+                    sleep(2)
+                    print("新的线程中主动断开连接")
+                    self.closeconn(conn)
+                th = Thread(target=disconnect_conn)
+                th.start()
             case _:
                 pass
-    def _onDisconnected(self, addr):
-        return super()._onDisconnected(addr)
+    
+    def _onDisconnected(self, conn, addr):
+        print("_onDisconnected")
+        return super()._onDisconnected(conn, addr)
         
 
 if __name__ == '__main__':

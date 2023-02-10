@@ -20,13 +20,7 @@ if __name__ == '__main__':
             code = input(">>>")
             if code.isdigit():
                 code = int(code)
-                match code:
-                    case 0:
-                        response = client.request(Message.JsonMsg(code, 0, text0="<0>test message send by client"))
-                    case 1:
-                        response = client.request(Message.JsonMsg(code, 0, text1="<1>test message send by client"))
-                    case _:
-                        continue
+                response = client.request(Message.JsonMsg(code, 0, text=f"test message<{code}> send by client"))
                 print(response)
             else:
                 break
