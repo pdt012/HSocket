@@ -6,10 +6,12 @@
 - 对tcp协议下文件传输的简单封装。
 
 ## python端
-- 基于selectors实现的一对多tcp服务器类;
-- udp服务器类;
-- 支持同步(request-response模式)/异步(多线程收发)的tcp/udp客户端类。  
+- 基于selectors实现的并发tcp服务端类HTcpSelectorServer;
+- 基于socketserver.ThreadingTCPServer实现的并发tcp服务端类HTcpThreadingServer;
+- udp服务端类;
+- 支持request-response模式/channel模式的tcp/udp客户端类。
 
 ## c++端
 - 对winSock的封装；
+- 支持request-response模式/channel模式的tcp/udp客户端类。
 - 打包为lib供其他应用使用。
