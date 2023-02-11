@@ -1,15 +1,15 @@
 # -*- coding: utf-8 -*-
 import sys
 sys.path.append("..")
-from src.hsocket.hserver import HTcpServer
+from src.hsocket.hserver import HTcpThreadingServer
 from src.hsocket.hsocket import HTcpSocket, Message
 from traceback import print_exc
 from threading import Thread
 from time import sleep
 
 
-class TcpServerApp(HTcpServer):
-    def _messageHandle(self, conn: "HTcpSocket", msg: "Message"):
+class TcpServerApp(HTcpThreadingServer):
+    def onMessageReceived(self, conn: HTcpSocket, msg: Message):
         addr = conn.getpeername()
         match msg.opcode():
             case 0:
@@ -35,15 +35,15 @@ class TcpServerApp(HTcpServer):
             case _:
                 pass
     
-    def _onDisconnected(self, conn, addr):
-        print("_onDisconnected")
-        return super()._onDisconnected(conn, addr)
+    def onDisconnected(self, conn: HTcpSocket, addr):
+        print("onDisconnected")
+        return super().onDisconnected(conn, addr)
         
 
 if __name__ == '__main__':
-    server = TcpServerApp()
+    server = TcpServerApp(("127.0.0.1", 40000))
     try:
-        server.startserver(("127.0.0.1", 40000))
+        server.startserver()
     except Exception as e:
         print(print_exc())
     input("press enter to exit")

@@ -2,14 +2,13 @@
 import sys
 
 sys.path.append("..")
-from src.hsocket.hserver import HTcpServer
+from src.hsocket.hserver import HTcpSelectorServer
 from src.hsocket.hsocket import HTcpSocket, Message
 from traceback import print_exc
 
 
-class TcpServerApp(HTcpServer):
-    def _messageHandle(self, conn: "HTcpSocket", msg: "Message"):
-        addr = conn.getpeername()
+class TcpServerApp(HTcpSelectorServer):
+    def onMessageReceived(self, conn: HTcpSocket, msg: Message):
         match msg.opcode():
             case 100:  # 上传
                 path = self.recvfile(conn)
@@ -27,14 +26,14 @@ class TcpServerApp(HTcpServer):
             case _:
                 pass
 
-    def _onDisconnected(self, conn, addr):
-        return super()._onDisconnected(conn, addr)
+    def onDisconnected(self, conn: HTcpSocket, addr):
+        return super().onDisconnected(conn, addr)
 
 
 if __name__ == '__main__':
-    server = TcpServerApp()
+    server = TcpServerApp(("127.0.0.1", 40000))
     try:
-        server.startserver(("127.0.0.1", 40000))
+        server.startserver()
     except Exception as e:
         print(print_exc())
     input("press enter to exit")
