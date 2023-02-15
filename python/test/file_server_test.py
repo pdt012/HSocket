@@ -7,31 +7,28 @@ from src.hsocket.hsocket import HTcpSocket, Message
 from traceback import print_exc
 
 
-class TcpServerApp(HTcpSelectorServer):
-    def onMessageReceived(self, conn: HTcpSocket, msg: Message):
-        match msg.opcode():
-            case 100:  # 上传
-                path = self.recvfile(conn)
-                print(f"recv file '{path}'")
-            case 101:  # 下载
-                self.sendfile(conn, "testfile/test1.txt", "test1_by_server.txt")
-                print(f"send file")
-            case 110:  # 上传
-                paths = self.recvfiles(conn)
-                print(f"recv file {paths}")
-            case 111:  # 下载
-                count = self.sendfiles(conn, ["testfile/test1.txt", "testfile/test2.txt"],
-                                       ["test1_by_server.txt", "test2_by_server.txt"])
-                print(f"send files ({count})")
-            case _:
-                pass
-
-    def onDisconnected(self, conn: HTcpSocket, addr):
-        return super().onDisconnected(conn, addr)
+def onMessageReceived(conn: HTcpSocket, msg: Message):
+    match msg.opcode():
+        case 100:  # 上传
+            path = server.recvfile(conn)
+            print(f"recv file '{path}'")
+        case 101:  # 下载
+            server.sendfile(conn, "testfile/test1.txt", "test1_by_server.txt")
+            print(f"send file")
+        case 110:  # 上传
+            paths = server.recvfiles(conn)
+            print(f"recv file {paths}")
+        case 111:  # 下载
+            count = server.sendfiles(conn, ["testfile/test1.txt", "testfile/test2.txt"],
+                                    ["test1_by_server.txt", "test2_by_server.txt"])
+            print(f"send files ({count})")
+        case _:
+            pass
 
 
 if __name__ == '__main__':
-    server = TcpServerApp(("127.0.0.1", 40000))
+    server = HTcpSelectorServer(("127.0.0.1", 40000))
+    server.addOnMessageReceivedDo(onMessageReceived)
     try:
         server.startserver()
     except Exception as e:

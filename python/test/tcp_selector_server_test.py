@@ -8,40 +8,40 @@ from threading import Thread
 from time import sleep
 
 
-class TcpServerApp(HTcpSelectorServer):
-    def onMessageReceived(self, conn: HTcpSocket, msg: Message):
-        addr = conn.getpeername()
-        match msg.opcode():
-            case 0:
-                text = msg.get("text")
-                print(addr, text)
-                conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 0"))
-            case 1:
-                text = msg.get("text")
-                print(addr, text)
-                conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 1"))
-            case 990:
-                # 主动断开连接
-                print("主动断开连接")
-                self.closeconn(conn)
-            case 991:
-                # 新的线程中主动断开连接
-                def disconnect_conn():
-                    sleep(2)
-                    print("新的线程中主动断开连接")
-                    self.closeconn(conn)
-                th = Thread(target=disconnect_conn)
-                th.start()
-            case _:
-                pass
-    
-    def onDisconnected(self, conn: HTcpSocket, addr):
-        print("onDisconnected")
-        return super().onDisconnected(conn, addr)
+def onMessageReceived(conn: HTcpSocket, msg: Message):
+    addr = conn.getpeername()
+    match msg.opcode():
+        case 0:
+            text = msg.get("text")
+            print(addr, text)
+            conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 0"))
+        case 1:
+            text = msg.get("text")
+            print(addr, text)
+            conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 1"))
+        case 990:
+            # 主动断开连接
+            print("主动断开连接")
+            server.closeconn(conn)
+        case 991:
+            # 新的线程中主动断开连接
+            def disconnect_conn():
+                sleep(2)
+                print("新的线程中主动断开连接")
+                server.closeconn(conn)
+            th = Thread(target=disconnect_conn)
+            th.start()
+        case _:
+            pass
+
+def onDisconnected(conn: HTcpSocket, addr):
+    print("onDisconnected")
         
 
 if __name__ == '__main__':
-    server = TcpServerApp(("127.0.0.1", 40000))
+    server = HTcpSelectorServer(("127.0.0.1", 40000))
+    server.addOnMessageReceivedDo(onMessageReceived)
+    server.addOnDisconnectedDo(onDisconnected)
     try:
         server.startserver()
     except Exception as e:

@@ -2,9 +2,12 @@
 import selectors
 from socketserver import ThreadingTCPServer, BaseRequestHandler
 from abc import abstractmethod
+from typing import Callable
 from .hsocket import *
 from .message import *
 
+
+ 
 
 class BuiltInOpCode(IntEnum):
     FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
@@ -12,9 +15,17 @@ class BuiltInOpCode(IntEnum):
 
 
 class __HTcpServer:
+    OnMessageReceivedDo = Callable[[HTcpSocket, Message], None]
+    OnConnectedDo = Callable[[HTcpSocket, tuple], None]
+    OnDisconnectedDo = Callable[[HTcpSocket, tuple], None]
+
     def __init__(self, addr):
         self._address: str = addr
         self.__ft_timeout = 15
+
+        self.__onMessageReceivedDoList: list[self.OnMessageReceivedDo] = []
+        self.__onConnectedDoList: list[self.OnConnectedDo] = []
+        self.__onDisconnectedDoList: list[self.OnDisconnectedDo] = []
 
     @abstractmethod
     def startserver(self):
@@ -55,10 +66,7 @@ class __HTcpServer:
     def recvfile(self, conn: HTcpSocket) -> str:
         try:
             with self._get_ft_transfer_conn(conn) as c_socket:
-                print(1111)
                 down_path = c_socket.recvFile()
-                print(down_path)
-                print(2222)
                 return down_path
         except OSError:
             return ""
@@ -95,15 +103,26 @@ class __HTcpServer:
         except OSError:
             return down_path_list
 
-    @abstractmethod
-    def onMessageReceived(self, conn: HTcpSocket, msg: Message):
-        ...
+    def addOnMessageReceivedDo(self, *callback: OnMessageReceivedDo):
+        self.__onMessageReceivedDoList.extend(callback)
 
-    def onConnected(self, conn: HTcpSocket, addr):
-        pass
+    def addOnConnectedDo(self, *callback: OnConnectedDo):
+        self.__onConnectedDoList.extend(callback)
 
-    def onDisconnected(self, conn: HTcpSocket, addr):
-        pass
+    def addOnDisconnectedDo(self, *callback: OnDisconnectedDo):
+        self.__onDisconnectedDoList.extend(callback)
+
+    def _onMessageReceived(self, conn: HTcpSocket, msg: Message):
+        for callback in self.__onMessageReceivedDoList:
+            callback(conn, msg)
+
+    def _onConnected(self, conn: HTcpSocket, addr):
+        for callback in self.__onConnectedDoList:
+            callback(conn, addr)
+
+    def _onDisconnected(self, conn: HTcpSocket, addr):
+        for callback in self.__onDisconnectedDoList:
+            callback(conn, addr)
 
 
 class HTcpSelectorServer(__HTcpServer):
@@ -151,7 +170,7 @@ class HTcpSelectorServer(__HTcpServer):
             conn.setblocking(False)
             self.msgs[conn] = None
             self.selector.register(conn, selectors.EVENT_READ, self.callback_read)
-            self.hserver.onConnected(conn, addr)
+            self.hserver._onConnected(conn, addr)
 
         def callback_read(self, conn: HTcpSocket):
             if not conn.isValid():
@@ -171,13 +190,13 @@ class HTcpSelectorServer(__HTcpServer):
             else:  # empty msg or error
                 self.remove(conn)
                 print("connection closed (read): {}".format(addr))
-                self.hserver.onDisconnected(conn, addr)  # disconnect callback
+                self.hserver._onDisconnected(conn, addr)  # disconnect callback
 
         def callback_write(self, conn: HTcpSocket):
             addr = conn.getpeername()
             msg = self.msgs[conn]
             if msg:
-                self.hserver.onMessageReceived(conn, msg)
+                self.hserver._onMessageReceived(conn, msg)
                 self.msgs[conn] = None
             if conn.isValid():  # may be disconnected in messageHandle
                 self.selector.modify(conn, selectors.EVENT_READ, self.callback_read)
@@ -207,7 +226,7 @@ class HTcpSelectorServer(__HTcpServer):
         """
         addr = conn.getpeername()
         conn.close()
-        self.onDisconnected(conn, addr)
+        self._onDisconnected(conn, addr)
 
 
 class HTcpThreadingServer(__HTcpServer):
@@ -223,7 +242,7 @@ class HTcpThreadingServer(__HTcpServer):
 
         def setup(self):
             print("connected: {}".format(self.client_address))
-            self.server.hserver.onConnected(self.request, self.client_address)
+            self.server.hserver._onConnected(self.request, self.client_address)
 
         def handle(self):
             conn = self.request
@@ -238,13 +257,13 @@ class HTcpThreadingServer(__HTcpServer):
                     print("socket is closed")
                     return 
                 if msg and msg.isValid():
-                    self.server.hserver.onMessageReceived(conn, msg)
+                    self.server.hserver._onMessageReceived(conn, msg)
                 else:  # empty msg or error
                     break
 
         def finish(self):
             print("connection closed: {}".format(self.client_address))
-            self.server.hserver.onDisconnected(self.request, self.client_address)
+            self.server.hserver._onDisconnected(self.request, self.client_address)
 
     class __HThreadingTCPServer(ThreadingTCPServer):
         def __init__(self, hserver: "HTcpThreadingServer", server_address, RequestHandlerClass):
@@ -277,9 +296,13 @@ class HTcpThreadingServer(__HTcpServer):
 
 
 class HUdpServer:
+    OnMessageReceivedDo = Callable[[Message, Optional[tuple]], None]
+
     def __init__(self, addr):
         self._address = addr
         self.__udp_socket = HUdpSocket()
+
+        self.__onMessageReceivedDoList: list[self.OnMessageReceivedDo] = []
 
     def socket(self) -> HUdpSocket:
         return self.__udp_socket
@@ -288,7 +311,7 @@ class HUdpServer:
         self.__udp_socket.bind(self._address)
         while self.__udp_socket.isValid():
             msg, from_ = self.__udp_socket.recvMsg()
-            self.onMessageReceived(msg, from_)
+            self._onMessageReceived(msg, from_)
 
     def closeserver(self):
         self.__udp_socket.close()
@@ -296,6 +319,9 @@ class HUdpServer:
     def sendto(self, msg: Message, c_addr):
         self.__udp_socket.sendMsg(msg, c_addr)
 
-    @abstractmethod
-    def onMessageReceived(self, msg: Message, c_addr):
-        ...
+    def addOnMessageReceivedDo(self, *callback: OnMessageReceivedDo):
+        self.__onMessageReceivedDoList.extend(callback)
+
+    def _onMessageReceived(self, msg: Message, c_addr: Optional[tuple]):
+        for callback in self.__onMessageReceivedDoList:
+            callback(msg, c_addr)
