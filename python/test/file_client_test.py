@@ -6,7 +6,7 @@ from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-class SynTcpClientApp(HTcpReqResClient):
+class FileClientApp(HTcpReqResClient):
     def __init__(self):
         super().__init__()
 
@@ -15,7 +15,7 @@ class SynTcpClientApp(HTcpReqResClient):
 
 
 if __name__ == '__main__':
-    client = SynTcpClientApp()
+    client = FileClientApp()
     client.connect(("127.0.0.1", 40000))
     print("start")
     try:

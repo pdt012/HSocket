@@ -42,13 +42,20 @@ class _HTcpClient:
         if not self._get_ft_transfer_port():
             return
         # send
-        try:
-            with HTcpSocket() as ft_socket:
+        with HTcpSocket() as ft_socket:
+            try:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
-                with open(path, 'rb') as fin:
-                    ft_socket.sendFile(fin, filename)
-        except OSError:
-            return
+            except OSError:
+                return
+            try:
+                fin = open(path, 'rb')
+            except OSError as e:  # file error
+                print(e)
+                return
+            try:
+                ft_socket.sendFile(fin, filename)
+            finally:
+                fin.close()
 
     def recvfile(self) -> str:
         if not self._get_ft_transfer_port():
@@ -69,20 +76,29 @@ class _HTcpClient:
             return 0
         # send
         count_sent = 0
-        try:
-            with HTcpSocket() as ft_socket:
+        with HTcpSocket() as ft_socket:
+            try:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
                 files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
                 ft_socket.sendMsg(files_header_msg)
-                for i in range(len(paths)):
-                    path = paths[i]
-                    filename = filenames[i]
-                    with open(path, 'rb') as fin:
-                        ft_socket.sendFile(fin, filename)
-                        count_sent += 1
-            return count_sent
-        except OSError:
-            return count_sent
+            except OSError:
+                return count_sent
+            for i in range(len(paths)):
+                path = paths[i]
+                filename = filenames[i]
+                try:
+                    fin = open(path, 'rb')
+                except OSError as e:  # file error
+                    print(e)
+                    continue
+                try:
+                    ft_socket.sendFile(fin, filename)
+                    count_sent += 1
+                except OSError:
+                    return count_sent
+                finally:
+                    fin.close()
+        return count_sent
 
     def recvfiles(self) -> list[str]:
         if not self._get_ft_transfer_port():
@@ -194,6 +210,7 @@ class HTcpReqResClient(_HTcpClient):
             msg = self._tcp_socket.recvMsg()
             if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
                 self._ft_server_port = msg.get("port")
+                print(self._ft_server_port)
                 return True
             else:
                 return False

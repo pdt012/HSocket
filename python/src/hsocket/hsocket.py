@@ -104,7 +104,9 @@ class HTcpSocket(_HSocket):
         filename_b: bytes = b""
         while True:
             char = self.recv(1)
-            if char != b'\0':
+            if not char:  # empty data
+                return ""
+            elif char != b'\0':
                 filename_b += char
             else:
                 break
