@@ -45,54 +45,82 @@ class __HTcpServer:
         """设置文件传输超时时间"""
         self.__ft_timeout = sec
 
-    def _get_ft_transfer_conn(self, conn: HTcpSocket) -> HTcpSocket:
+    def _get_ft_transfer_conn(self, conn: HTcpSocket) -> Optional[HTcpSocket]:
         with HTcpSocket() as ft_socket:
-            ft_socket.bind((self._address[0], 0))
-            port = ft_socket.getsockname()[1]
-            conn.sendMsg(Message.JsonMsg(BuiltInOpCode.FT_TRANSFER_PORT, port=port))
-            ft_socket.settimeout(self.__ft_timeout)
-            ft_socket.listen(1)
-            c_socket, c_addr = ft_socket.accept()
-            return c_socket
+            try:
+                ft_socket.bind((self._address[0], 0))
+                port = ft_socket.getsockname()[1]
+                conn.sendMsg(Message.JsonMsg(BuiltInOpCode.FT_TRANSFER_PORT, port=port))
+                ft_socket.settimeout(self.__ft_timeout)
+                ft_socket.listen(1)
+                c_socket, c_addr = ft_socket.accept()
+                return c_socket
+            except OSError:
+                return None
 
     def sendfile(self, conn: HTcpSocket, path: str, filename: str):
-        try:
-            with self._get_ft_transfer_conn(conn) as c_socket:
-                with open(path, 'rb') as fin:
-                    c_socket.sendFile(fin, filename)
-        except OSError:
+        c_socket = self._get_ft_transfer_conn(conn)
+        if c_socket is None:
             return
+        with c_socket:
+            try:
+                fin = open(path, 'rb')
+            except OSError as e:  # file error
+                print(e)
+                return
+            try:
+                c_socket.sendFile(fin, filename)
+            finally:
+                fin.close()
 
     def recvfile(self, conn: HTcpSocket) -> str:
-        try:
-            with self._get_ft_transfer_conn(conn) as c_socket:
+        c_socket = self._get_ft_transfer_conn(conn)
+        if c_socket is None:
+            return
+        with c_socket:
+            try:
                 down_path = c_socket.recvFile()
                 return down_path
-        except OSError:
-            return ""
+            except OSError:
+                return ""
 
     def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
         if len(paths) != len(filenames):
             return 0
+        c_socket = self._get_ft_transfer_conn(conn)
+        if c_socket is None:
+            return 0
         count_sent = 0
-        try:
-            with self._get_ft_transfer_conn(conn) as c_socket:
+        with c_socket:
+            try:
                 files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
                 c_socket.sendMsg(files_header_msg)
-                for i in range(len(paths)):
-                    path = paths[i]
-                    filename = filenames[i]
-                    with open(path, 'rb') as fin:
-                        c_socket.sendFile(fin, filename)
-                        count_sent += 1
-                return count_sent
-        except OSError:
-            return count_sent
+            except OSError:
+                return 0
+            for i in range(len(paths)):
+                path = paths[i]
+                filename = filenames[i]
+                try:
+                    fin = open(path, 'rb')
+                except OSError as e:  # file error
+                    print(e)
+                    continue
+                try:
+                    c_socket.sendFile(fin, filename)
+                    count_sent += 1
+                except OSError:
+                    return count_sent
+                finally:
+                    fin.close()
+        return count_sent
 
     def recvfiles(self, conn: HTcpSocket) -> list[str]:
         down_path_list = []
-        try:
-            with self._get_ft_transfer_conn(conn) as c_socket:
+        c_socket = self._get_ft_transfer_conn(conn)
+        if c_socket is None:
+            return
+        with c_socket:
+            try:
                 files_header_msg = c_socket.recvMsg()
                 file_count = files_header_msg.get("file_count")
                 for i in range(file_count):
@@ -100,8 +128,8 @@ class __HTcpServer:
                     if path:
                         down_path_list.append(path)
                 return down_path_list
-        except OSError:
-            return down_path_list
+            except OSError:
+                return down_path_list
 
     def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
         self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
