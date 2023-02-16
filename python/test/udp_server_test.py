@@ -6,23 +6,23 @@ from src.hsocket.hsocket import HUdpSocket, Message
 from traceback import print_exc
 
 
-class UdpServerApp(HUdpServer):
-    def _messageHandle(self, msg: "Message", c_addr):
-        match msg.opcode():
-            case 0:
-                text = msg.get("text")
-                print(c_addr, text)
-                self.sendto(Message.JsonMsg(0, 1, reply="hello 0"), c_addr)
-            case 1:
-                text = msg.get("text")
-                print(c_addr, text)
-                self.sendto(Message.JsonMsg(0, 1, reply="hello 1"), c_addr)
-            case _:
-                pass
-        
+def onMessageReceived(msg: "Message", c_addr):
+    match msg.opcode():
+        case 0:
+            text = msg.get("text")
+            print(c_addr, text)
+            server.sendto(Message.JsonMsg(0, 1, reply="hello 0"), c_addr)
+        case 1:
+            text = msg.get("text")
+            print(c_addr, text)
+            server.sendto(Message.JsonMsg(0, 1, reply="hello 1"), c_addr)
+        case _:
+            pass
+
 
 if __name__ == '__main__':
-    server = UdpServerApp(("127.0.0.1", 40000))
+    server = HUdpServer(("127.0.0.1", 40000))
+    server.setOnMessageReceivedCallback(onMessageReceived)
     try:
         server.startserver()
     except Exception as e:

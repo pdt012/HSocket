@@ -28,7 +28,7 @@ def onMessageReceived(conn: HTcpSocket, msg: Message):
 
 if __name__ == '__main__':
     server = HTcpSelectorServer(("127.0.0.1", 40000))
-    server.addOnMessageReceivedDo(onMessageReceived)
+    server.setOnMessageReceivedCallback(onMessageReceived)
     try:
         server.startserver()
     except Exception as e:

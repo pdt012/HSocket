@@ -7,25 +7,25 @@ from .hsocket import *
 from .message import *
 
 
- 
-
 class BuiltInOpCode(IntEnum):
     FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
     FT_SEND_FILES_HEADER = 62000  # 多文件传输时头部信息 {"file_count": 文件数}
 
 
 class __HTcpServer:
-    OnMessageReceivedDo = Callable[[HTcpSocket, Message], None]
-    OnConnectedDo = Callable[[HTcpSocket, tuple], None]
-    OnDisconnectedDo = Callable[[HTcpSocket, tuple], None]
+    OnMsgRecvByOpCodeCallback = Callable[[HTcpSocket, Message], bool]  # 返回False时会继续进行OnMessageReceivedCallback
+    OnMessageReceivedCallback = Callable[[HTcpSocket, Message], None]
+    OnConnectedCallback = Callable[[HTcpSocket, tuple], None]
+    OnDisconnectedCallback = Callable[[HTcpSocket, tuple], None]
 
     def __init__(self, addr):
         self._address: str = addr
         self.__ft_timeout = 15
 
-        self.__onMessageReceivedDoList: list[self.OnMessageReceivedDo] = []
-        self.__onConnectedDoList: list[self.OnConnectedDo] = []
-        self.__onDisconnectedDoList: list[self.OnDisconnectedDo] = []
+        self.__onMsgRecvByOpCodeCallbackDict: dict[int, self.OnMsgRecvByOpCodeCallback] = {}
+        self.__onMessageReceivedCallback: Optional[self.OnMessageReceivedCallback] = None
+        self.__onConnectedCallback: Optional[self.OnConnectedCallback] = None
+        self.__onDisconnectedCallback: Optional[self.OnDisconnectedCallback] = None
 
     @abstractmethod
     def startserver(self):
@@ -103,26 +103,38 @@ class __HTcpServer:
         except OSError:
             return down_path_list
 
-    def addOnMessageReceivedDo(self, *callback: OnMessageReceivedDo):
-        self.__onMessageReceivedDoList.extend(callback)
+    def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
+        self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
 
-    def addOnConnectedDo(self, *callback: OnConnectedDo):
-        self.__onConnectedDoList.extend(callback)
+    def popOnMsgRecvByOpCodeCallback(self, opcode: int):
+        self.__onMsgRecvByOpCodeCallbackDict.pop(opcode)
 
-    def addOnDisconnectedDo(self, *callback: OnDisconnectedDo):
-        self.__onDisconnectedDoList.extend(callback)
+    def setOnMessageReceivedCallback(self, callback: OnMessageReceivedCallback):
+        self.__onMessageReceivedCallback = callback
+
+    def setOnConnectedCallback(self, callback: OnConnectedCallback):
+        self.__onConnectedCallback = callback
+
+    def setOnDisconnectedCallback(self, callback: OnDisconnectedCallback):
+        self.__onDisconnectedCallback = callback
 
     def _onMessageReceived(self, conn: HTcpSocket, msg: Message):
-        for callback in self.__onMessageReceivedDoList:
-            callback(conn, msg)
+        opcode = msg.opcode()
+        callback = self.__onMsgRecvByOpCodeCallbackDict.get(opcode)
+        if callback is not None:
+            finished = callback(conn, msg)
+            if finished:
+                return
+        if self.__onMessageReceivedCallback:
+            self.__onMessageReceivedCallback(conn, msg)
 
     def _onConnected(self, conn: HTcpSocket, addr):
-        for callback in self.__onConnectedDoList:
-            callback(conn, addr)
+        if self.__onConnectedCallback:
+            self.__onConnectedCallback(conn, addr)
 
     def _onDisconnected(self, conn: HTcpSocket, addr):
-        for callback in self.__onDisconnectedDoList:
-            callback(conn, addr)
+        if self.__onDisconnectedCallback:
+            self.__onDisconnectedCallback(conn, addr)
 
 
 class HTcpSelectorServer(__HTcpServer):
@@ -296,13 +308,15 @@ class HTcpThreadingServer(__HTcpServer):
 
 
 class HUdpServer:
-    OnMessageReceivedDo = Callable[[Message, Optional[tuple]], None]
+    OnMsgRecvByOpCodeCallback = Callable[[Message, Optional[tuple]], bool]  # 返回False时会继续进行OnMessageReceivedCallback
+    OnMessageReceivedCallback = Callable[[Message, Optional[tuple]], None]
 
     def __init__(self, addr):
         self._address = addr
         self.__udp_socket = HUdpSocket()
 
-        self.__onMessageReceivedDoList: list[self.OnMessageReceivedDo] = []
+        self.__onMsgRecvByOpCodeCallbackDict: dict[int, self.OnMsgRecvByOpCodeCallback] = {}
+        self.__onMessageReceivedCallback: Optional[self.OnMessageReceivedCallback] = None
 
     def socket(self) -> HUdpSocket:
         return self.__udp_socket
@@ -319,9 +333,21 @@ class HUdpServer:
     def sendto(self, msg: Message, c_addr):
         self.__udp_socket.sendMsg(msg, c_addr)
 
-    def addOnMessageReceivedDo(self, *callback: OnMessageReceivedDo):
-        self.__onMessageReceivedDoList.extend(callback)
+    def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
+        self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
+
+    def popOnMsgRecvByOpCodeCallback(self, opcode: int):
+        self.__onMsgRecvByOpCodeCallbackDict.pop(opcode)
+
+    def setOnMessageReceivedCallback(self, callback: OnMessageReceivedCallback):
+        self.__onMessageReceivedCallback = callback
 
     def _onMessageReceived(self, msg: Message, c_addr: Optional[tuple]):
-        for callback in self.__onMessageReceivedDoList:
-            callback(msg, c_addr)
+        opcode = msg.opcode()
+        callback = self.__onMsgRecvByOpCodeCallbackDict.get(opcode)
+        if callback is not None:
+            finished = callback(msg, c_addr)
+            if finished:
+                return
+        if self.__onMessageReceivedCallback:
+            self.__onMessageReceivedCallback(msg, c_addr)
