@@ -6,16 +6,12 @@ from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-class AsynUdpClientApp(HUdpChannelClient):
-    def __init__(self, addr):
-        super().__init__(addr)
-
-    def _onMessageReceived(self, msg: "Message"):
-        print('msg: ',msg)
+def onMessageReceived(msg: "Message"):
+    print('msg: ', msg)
 
 
 if __name__ == '__main__':
-    client = AsynUdpClientApp(("127.0.0.1", 40000))
+    client = HUdpChannelClient(("127.0.0.1", 40000))
     try:
         while 1:
             if client.isclosed():

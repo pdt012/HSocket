@@ -1,18 +1,24 @@
 # -*- coding: utf-8 -*-
 from abc import abstractmethod
+from typing import Callable
 import threading
-import socket
 from .hsocket import *
 from .message import *
 from .hserver import BuiltInOpCode
 
 
 class _HTcpClient:
+    OnConnectedCallback = Callable[[], None]
+    OnDisconnectedCallback = Callable[[], None]
+
     def __init__(self):
         self._tcp_socket: HTcpSocket = HTcpSocket()
         self._tcp_socket.setblocking(True)
         self._ft_server_ip = ""
         self._ft_server_port = 0
+
+        self.__onConnectedCallback: Optional[self.OnConnectedCallback] = None
+        self.__onDisconnectedCallback: Optional[self.OnDisconnectedCallback] = None
 
     def socket(self) -> HTcpSocket:
         return self._tcp_socket
@@ -23,6 +29,7 @@ class _HTcpClient:
     def connect(self, addr):
         self._tcp_socket.connect(addr)
         self._ft_server_ip = addr[0]
+        self._onConnected()
 
     def close(self):
         self._tcp_socket.close()
@@ -118,16 +125,33 @@ class _HTcpClient:
         except OSError:
             return down_path_list
 
+    def setOnConnectedCallback(self, callback: OnConnectedCallback):
+        self.__onConnectedCallback = callback
+
+    def setOnDisconnectedCallback(self, callback: OnDisconnectedCallback):
+        self.__onDisconnectedCallback = callback
+
+    def _onConnected(self):
+        if self.__onConnectedCallback:
+            self.__onConnectedCallback()
+
     def _onDisconnected(self):
-        pass
+        if self.__onDisconnectedCallback:
+            self.__onDisconnectedCallback()
 
 
 class HTcpChannelClient(_HTcpClient):
+    OnMessageReceivedCallback = Callable[[Message], None]
+    OnMsgRecvByOpCodeCallback = Callable[[Message], bool]  # 返回False时会继续进行OnMessageReceivedCallback
+
     def __init__(self):
         super().__init__()
         self.__th_message = threading.Thread(target=self.__message_handle, daemon=True)
         self.__con_ft_port = threading.Condition()
         self.__ft_timeout = 15
+
+        self.__onMessageReceivedCallback: Optional[self.OnMessageReceivedCallback] = None
+        self.__onMsgRecvByOpCodeCallbackDict: dict[int, self.OnMsgRecvByOpCodeCallback] = {}
 
     def connect(self, addr):
         super().connect(addr)
@@ -170,9 +194,24 @@ class HTcpChannelClient(_HTcpClient):
                     continue
                 self._onMessageReceived(msg)
 
-    @abstractmethod
+    def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
+        self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
+
+    def popOnMsgRecvByOpCodeCallback(self, opcode: int):
+        self.__onMsgRecvByOpCodeCallbackDict.pop(opcode)
+
+    def setOnMessageReceivedCallback(self, callback: OnMessageReceivedCallback):
+        self.__onMessageReceivedCallback = callback
+
     def _onMessageReceived(self, msg: Message):
-        ...
+        opcode = msg.opcode()
+        callback = self.__onMsgRecvByOpCodeCallbackDict.get(opcode)
+        if callback is not None:
+            finished = callback(msg)
+            if finished:
+                return
+        if self.__onMessageReceivedCallback:
+            self.__onMessageReceivedCallback(msg)
 
 
 class HTcpReqResClient(_HTcpClient):
@@ -241,10 +280,16 @@ class _HUdpClient:
 
 
 class HUdpChannelClient(_HUdpClient):
+    OnMessageReceivedCallback = Callable[[Message], None]
+    OnMsgRecvByOpCodeCallback = Callable[[Message], bool]  # 返回False时会继续进行OnMessageReceivedCallback
+
     def __init__(self, addr):
         super().__init__(addr)
         self.__running = False
         self.__th_message = threading.Thread(target=self.__message_handle, daemon=True)
+
+        self.__onMessageReceivedCallback: Optional[self.OnMessageReceivedCallback] = None
+        self.__onMsgRecvByOpCodeCallbackDict: dict[int, self.OnMsgRecvByOpCodeCallback] = {}
 
     def close(self):
         self.__running = False
@@ -268,9 +313,24 @@ class HUdpChannelClient(_HUdpClient):
             else:
                 self._onMessageReceived(msg)
 
-    @abstractmethod
+    def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
+        self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
+
+    def popOnMsgRecvByOpCodeCallback(self, opcode: int):
+        self.__onMsgRecvByOpCodeCallbackDict.pop(opcode)
+
+    def setOnMessageReceivedCallback(self, callback: OnMessageReceivedCallback):
+        self.__onMessageReceivedCallback = callback
+
     def _onMessageReceived(self, msg: Message):
-        ...
+        opcode = msg.opcode()
+        callback = self.__onMsgRecvByOpCodeCallbackDict.get(opcode)
+        if callback is not None:
+            finished = callback(msg)
+            if finished:
+                return
+        if self.__onMessageReceivedCallback:
+            self.__onMessageReceivedCallback(msg)
 
 
 class HUdpReqResClient(_HUdpClient):

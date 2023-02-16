@@ -6,16 +6,8 @@ from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-class SynTcpClientApp(HTcpReqResClient):
-    def __init__(self):
-        super().__init__()
-
-    def _onDisconnected(self):
-        return super()._onDisconnected()
-
-
 if __name__ == '__main__':
-    client = SynTcpClientApp()
+    client = HTcpReqResClient()
     client.connect(("127.0.0.1", 40000))
     print("start")
     try:

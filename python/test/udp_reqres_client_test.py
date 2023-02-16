@@ -6,13 +6,8 @@ from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-class SynUdpClientApp(HUdpReqResClient):
-    def __init__(self, addr):
-        super().__init__(addr)
-
-
 if __name__ == '__main__':
-    client = SynUdpClientApp(("127.0.0.1", 40000))
+    client = HUdpReqResClient(("127.0.0.1", 40000))
     client.settimeout(5.0)
     print("start")
     try:

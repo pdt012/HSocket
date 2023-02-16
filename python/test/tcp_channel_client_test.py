@@ -6,19 +6,13 @@ from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-class AsynTcpClientApp(HTcpChannelClient):
-    def __init__(self):
-        super().__init__()
-
-    def _onMessageReceived(self, msg: "Message"):
-        print(msg)
-
-    def _onDisconnected(self):
-        return super()._onDisconnected()
+def onMessageReceived(msg: "Message"):
+    print(msg)
 
 
 if __name__ == '__main__':
-    client = AsynTcpClientApp()
+    client = HTcpChannelClient()
+    client.setOnMessageReceivedCallback(onMessageReceived)
     client.connect(("127.0.0.1", 40000))
     print("start")
     try:
