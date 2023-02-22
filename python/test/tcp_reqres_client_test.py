@@ -15,7 +15,7 @@ if __name__ == '__main__':
             code = input(">>>")
             if code.isdigit():
                 code = int(code)
-                response = client.request(Message.JsonMsg(code, 0, text=f"test message<{code}> send by client"))
+                response = client.request(Message.JsonMsg(code, text=f"test message<{code}> send by client"))
                 print(response)
             else:
                 break
