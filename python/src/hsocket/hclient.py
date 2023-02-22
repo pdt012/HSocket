@@ -311,7 +311,8 @@ class HUdpChannelClient(_HUdpClient):
             except TimeoutError:
                 continue
             else:
-                self._onMessageReceived(msg)
+                if msg.isValid():
+                    self._onMessageReceived(msg)
 
     def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
         self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
@@ -344,4 +345,7 @@ class HUdpReqResClient(_HUdpClient):
         except TimeoutError:
             return None
         else:
-            return response
+            if msg.isValid():
+                return response
+            else:
+                return None

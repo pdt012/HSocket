@@ -353,7 +353,8 @@ class HUdpServer:
         self.__udp_socket.bind(self._address)
         while self.__udp_socket.isValid():
             msg, from_ = self.__udp_socket.recvMsg()
-            self._onMessageReceived(msg, from_)
+            if msg.isValid():
+                self._onMessageReceived(msg, from_)
 
     def closeserver(self):
         self.__udp_socket.close()
