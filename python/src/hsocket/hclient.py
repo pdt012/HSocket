@@ -52,7 +52,7 @@ class _HTcpClient:
         with HTcpSocket() as ft_socket:
             try:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
-            except OSError:
+            except ConnectionError:
                 return
             try:
                 fin = open(path, 'rb')
@@ -61,6 +61,8 @@ class _HTcpClient:
                 return
             try:
                 ft_socket.sendFile(fin, filename)
+            except OSError:
+                return
             finally:
                 fin.close()
 
@@ -160,10 +162,10 @@ class HTcpChannelClient(_HTcpClient):
     def sendmsg(self, msg: Message) -> bool:
         try:
             self._tcp_socket.sendMsg(msg)
-        except ConnectionResetError:
+        except OSError:
             self.__th_message.join()  # make sure that '_onDisconnected' only runs once
             if not self.isclosed():
-                print("connection reset")
+                print("connection error")
                 self._onDisconnected()
                 self.close()
             return False
@@ -182,8 +184,8 @@ class HTcpChannelClient(_HTcpClient):
                 msg = self._tcp_socket.recvMsg()
             except TimeoutError:
                 continue
-            except ConnectionResetError:
-                print("connection reset")
+            except OSError:
+                print("connection error")
                 self._onDisconnected()
                 self.close()
                 break
@@ -221,9 +223,9 @@ class HTcpReqResClient(_HTcpClient):
     def sendmsg(self, msg: Message) -> bool:
         try:
             self._tcp_socket.sendMsg(msg)
-        except ConnectionResetError:
+        except OSError:
             if not self.isclosed():
-                print("connection reset")
+                print("connection error")
                 self._onDisconnected()
                 self.close()
             return False
@@ -235,8 +237,8 @@ class HTcpReqResClient(_HTcpClient):
                 response = self._tcp_socket.recvMsg()
             except TimeoutError:
                 return Message(ContentType.ERROR_)
-            except ConnectionResetError:
-                print("connection reset")
+            except OSError:
+                print("connection error")
                 self._onDisconnected()
                 self.close()
                 return Message(ContentType.ERROR_)

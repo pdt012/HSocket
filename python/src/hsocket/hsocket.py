@@ -150,6 +150,9 @@ class HUdpSocket(_HSocket):
 
     def recvMsg(self) -> tuple[Message, Optional[tuple[str, int]]]:
         """接收一个数据包
+        
+        Raises:
+            TimeoutError: 阻塞模式下等待超时时抛出。
 
         Returns:
             tuple[Message, Optional[tuple[str, int]]]: 数据包(可能为Error包或空包)，源地址
