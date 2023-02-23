@@ -17,6 +17,8 @@ if __name__ == '__main__':
                 code = int(code)
                 response = client.request(Message.JsonMsg(code, text=f"test message<{code}> send by client"))
                 print(response)
+            elif code == "e":  # 发送错误报文
+                client.socket().send(b"\0")
             else:
                 break
     except Exception as e:

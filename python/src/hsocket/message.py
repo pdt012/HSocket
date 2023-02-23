@@ -4,13 +4,31 @@ from enum import IntEnum
 import json
 
 
+class MessageError(Exception):
+    """Base class of message error."""
+    ...
+
+
+class EmptyMessageError(MessageError):
+    """Received an empty message."""
+    ...
+
+
+class MessageHeaderError(MessageError):
+    """error in loading a message header."""
+    ...
+
+
+class MessageTypeError(MessageError):
+    """Content of message does not match contenttype."""
+    ...
+
+
 class ContentType(IntEnum):
-    NONE = 0x0  # 空报文
-    ERROR_ = 0x1  # 错误报文
-    HEADERONLY = 0x2  # 只含报头
-    PLAINTEXT = 0x3  # 纯文本内容
-    JSONOBJRCT = 0x4  # JSON对象
-    BINARY = 0x5  # 二进制串
+    HEADERONLY = 0x1  # 只含报头
+    PLAINTEXT = 0x2  # 纯文本内容
+    JSONOBJRCT = 0x3  # JSON对象
+    BINARY = 0x4  # 二进制串
 
 
 class MessageConfig:
@@ -34,13 +52,17 @@ class Header:
         return header
 
     @classmethod
-    def fromBytes(cls, data: bytes) -> Optional["Header"]:
+    def fromBytes(cls, data: bytes) -> Self:
         """二进制流转换为Header
 
-        如果转换失败返回None。
+        Raises:
+            EmptyMessageError: 收到空报文时抛出
+            MessageHeaderError: 报头解析异常时抛出
         """
+        if not data:
+            raise EmptyMessageError()
         if len(data) != cls.HEADER_LENGTH:
-            return None
+            raise MessageHeaderError()
         contenttype = int.from_bytes(data[0:2], 'little', signed=False)  # 报文内容码
         opcode = int.from_bytes(data[2:4], 'little', signed=False)  # 操作码
         length = int().from_bytes(data[4:8], 'little', signed=False)  # 报文长度
@@ -48,11 +70,16 @@ class Header:
 
 
 class Message:
-    def __init__(self, contenttype: ContentType = ContentType.NONE, opcode: int = 0, content: Union[str, bytes] = ""):
+    def __init__(self, contenttype: ContentType, opcode: int = 0, content: Union[str, bytes] = ""):
+        """Message
+
+        Raises:
+            MessageTypeError: 当正文内容与类型不匹配时抛出
+        """
         self.__contenttype: ContentType = contenttype  # 报文内容码
         self.__opcode: int = opcode  # 操作码
         self.__content: Union[str, bytes] = ""
-        self.__json: dict = {}
+        self.__json: Optional[dict] = None
 
         if content:
             match self.__contenttype:
@@ -66,21 +93,17 @@ class Message:
                 case ContentType.BINARY if isinstance(content, bytes):
                     self.__content = content
                 case _:
-                    raise ValueError("content does not match ContentType")
+                    raise MessageTypeError("content does not match ContentType")
 
     @classmethod
     def HeaderContent(cls, header: Header, content: Union[str, bytes]) -> Self:
         """由Header和正文内容组成Message"""
-        if header is None:
-            return Message()
-        msg = Message(header.contenttype, header.opcode, content)
-        return msg
+        return Message(header.contenttype, header.opcode, content)
 
     @classmethod
     def HeaderOnlyMsg(cls, opcode: int = 0) -> Self:
         """不含正文的Message"""
-        msg = Message(ContentType.HEADERONLY, opcode)
-        return msg
+        return Message(ContentType.HEADERONLY, opcode)
 
     @classmethod
     def PlainTextMsg(cls, opcode: int = 0, text: str = "") -> Self:
@@ -101,6 +124,8 @@ class Message:
         msg = Message(ContentType.JSONOBJRCT, opcode)
         if dict_ is not None:
             msg.__json = dict_
+        else:
+            msg.__json = {}
         for key in kw.keys():
             if kw[key] is not None:
                 msg.__json[key] = kw[key]
@@ -113,21 +138,23 @@ class Message:
         msg.__content = content
         return msg
 
-    def isValid(self) -> bool:
-        """是否为非空/非错误包"""
-        return self.__contenttype != ContentType.NONE and self.__contenttype != ContentType.ERROR_
-
     def get(self, key: str) -> Any:
         """当正文为JSONOBJRCT类型时获取json值
 
         Args:
             key (str): json键名
 
+        Raises:
+            MessageTypeError: 正文内容不为json时抛出
+
         Returns:
             Any: json值
         """
-        ret = self.__json.get(key)
-        return ret
+        if self.__contenttype == ContentType.JSONOBJRCT:
+            ret = self.__json.get(key)
+            return ret
+        else:
+            raise MessageTypeError("need a JSONOBJRCT message")
 
     def content(self) -> Union[str, bytes]:
         """直接获取正文"""
@@ -145,7 +172,7 @@ class Message:
         """转换为二进制流
 
         Raises:
-            ValueError: 当正文内容与类型不匹配时抛出。
+            MessageTypeError: 当正文内容与类型不匹配时抛出
         """
         match self.__contenttype:
             case ContentType.HEADERONLY:
@@ -157,18 +184,27 @@ class Message:
             case ContentType.BINARY if isinstance(self.__content, bytes):
                 content = self.__content
             case _:
-                raise ValueError("content does not match ContentType")
+                raise MessageTypeError("content does not match ContentType")
         length = len(content)  # 数据包长度(不包含报头)
         header = Header(self.__contenttype, self.__opcode, length)
         return header.toBytes() + content
 
     @classmethod
     def fromBytes(cls, data: bytes) -> Self:
-        if len(data) < Header.HEADER_LENGTH:
-            return Message()
+        """二进制流转换为Message
+
+        Args:
+            data (bytes): _description_
+
+        Raises:
+            EmptyMessageError: 收到空报文时抛出
+            MessageHeaderError: 报头解析异常时抛出
+            UnicodeDecodeError: 报文内容编码异常时抛出
+
+        Returns:
+            Self: _description_
+        """
         header = Header.fromBytes(data[0:Header.HEADER_LENGTH])
-        if header is None:
-            return Message()
         if header.contenttype == ContentType.BINARY:
             msg = Message.HeaderContent(header, data[Header.HEADER_LENGTH:])
         else:

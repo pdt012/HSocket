@@ -76,13 +76,13 @@ class __HTcpServer:
     def recvfile(self, conn: HTcpSocket) -> str:
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
-            return
+            return ""
         with c_socket:
             try:
                 down_path = c_socket.recvFile()
-                return down_path
             except OSError:
                 return ""
+        return down_path
 
     def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
         if len(paths) != len(filenames):
@@ -115,21 +115,24 @@ class __HTcpServer:
         return count_sent
 
     def recvfiles(self, conn: HTcpSocket) -> list[str]:
-        down_path_list = []
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
-            return
+            return []
+        down_path_list = []
         with c_socket:
             try:
                 files_header_msg = c_socket.recvMsg()
-                file_count = files_header_msg.get("file_count")
-                for i in range(file_count):
+            except (OSError, MessageError):
+                return []
+            file_count = files_header_msg.get("file_count")
+            for i in range(file_count):
+                try:
                     path = c_socket.recvFile()
                     if path:
                         down_path_list.append(path)
-                return down_path_list
-            except OSError:
-                return down_path_list
+                except OSError:
+                    break
+        return down_path_list
 
     def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
         self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
@@ -219,18 +222,23 @@ class HTcpSelectorServer(__HTcpServer):
                 self.remove(conn)
                 return
             addr = conn.getpeername()
+            flag_error = False
             try:
                 msg = conn.recvMsg()  # receive msg
-            except ConnectionResetError:
-                print("connection reset: {}".format(addr))
-                msg = None
-            if msg and msg.isValid():
-                self.msgs[conn] = msg
-                self.selector.modify(conn, selectors.EVENT_WRITE, self.callback_write)
-            else:  # empty msg or error
+            except OSError:
+                flag_error = True
+                print("connection error: {}".format(addr))
+            except MessageError:
+                flag_error = True
+                print("message error: {}".format(addr))
+                conn.close()  # close connection without onDisconnected callback
+            if flag_error:
                 self.remove(conn)
                 print("connection closed (read): {}".format(addr))
                 self.hserver._onDisconnected(conn, addr)  # disconnect callback
+            else:
+                self.msgs[conn] = msg
+                self.selector.modify(conn, selectors.EVENT_WRITE, self.callback_write)
 
         def callback_write(self, conn: HTcpSocket):
             addr = conn.getpeername()
@@ -290,16 +298,18 @@ class HTcpThreadingServer(__HTcpServer):
             while True:
                 try:
                     msg = conn.recvMsg()  # receive msg
-                except ConnectionResetError:
-                    print("connection reset: {}".format(addr))
-                    msg = None
-                except OSError:  # socket is closed
-                    print("socket is closed")
-                    return 
-                if msg and msg.isValid():
+                # except ConnectionResetError:
+                #     print("connection reset: {}".format(addr))
+                #     return
+                except OSError:
+                    print("connection error: {}".format(addr))
+                    return
+                except MessageError:  # message error
+                    print("message error: {}".format(addr))
+                    self.server.hserver.closeconn(conn)  # close connection
+                    return
+                else:
                     self.server.hserver._onMessageReceived(conn, msg)
-                else:  # empty msg or error
-                    break
 
         def finish(self):
             print("connection closed: {}".format(self.client_address))
@@ -352,9 +362,11 @@ class HUdpServer:
     def startserver(self):
         self.__udp_socket.bind(self._address)
         while self.__udp_socket.isValid():
-            msg, from_ = self.__udp_socket.recvMsg()
-            if msg.isValid():
+            try:
+                msg, from_ = self.__udp_socket.recvMsg()
                 self._onMessageReceived(msg, from_)
+            except MessageError:
+                continue
 
     def closeserver(self):
         self.__udp_socket.close()
