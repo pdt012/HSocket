@@ -93,7 +93,7 @@ class __HTcpServer:
         count_sent = 0
         with c_socket:
             try:
-                files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
+                files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, {"file_count": len(paths)})
                 c_socket.sendMsg(files_header_msg)
             except OSError:
                 return 0
