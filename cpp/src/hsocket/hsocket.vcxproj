@@ -94,13 +94,18 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)header;$(ProjectDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
       </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(OutDir)include\$(ProjectName)"
+xcopy "$(ProjectDir)header\*.h" "$(OutDir)include\$(ProjectName)" /s /y
+xcopy "$(ProjectDir)include\*" "$(OutDir)include\$(ProjectName)" /s /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -112,7 +117,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)header;$(ProjectDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -121,6 +126,11 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(OutDir)include\$(ProjectName)"
+xcopy "$(ProjectDir)header\*.h" "$(OutDir)include\$(ProjectName)" /s /y
+xcopy "$(ProjectDir)include\*" "$(OutDir)include\$(ProjectName)" /s /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
@@ -130,13 +140,18 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)header;$(ProjectDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
       </SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(OutDir)include\$(ProjectName)"
+xcopy "$(ProjectDir)header\*.h" "$(OutDir)include\$(ProjectName)" /s /y
+xcopy "$(ProjectDir)include\*" "$(OutDir)include\$(ProjectName)" /s /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -148,7 +163,7 @@
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeader>Use</PrecompiledHeader>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
-      <AdditionalIncludeDirectories>include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)header;$(ProjectDir)include</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>
@@ -157,32 +172,32 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PostBuildEvent>
+      <Command>mkdir "$(OutDir)include\$(ProjectName)"
+xcopy "$(ProjectDir)header\*.h" "$(OutDir)include\$(ProjectName)" /s /y
+xcopy "$(ProjectDir)include\*" "$(OutDir)include\$(ProjectName)" /s /y</Command>
+    </PostBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="include\framework.h" />
-    <ClInclude Include="include\hclient.h" />
-    <ClInclude Include="include\HSocket.h" />
-    <ClInclude Include="include\HTcpSocket.h" />
-    <ClInclude Include="include\HUdpSocket.h" />
-    <ClInclude Include="include\IPv4Address.h" />
-    <ClInclude Include="include\Message.h" />
-    <ClInclude Include="include\pch.h" />
-    <ClInclude Include="include\util.h" />
+    <ClCompile Include="source\hclient.cpp" />
+    <ClCompile Include="source\hsocket.cpp" />
+    <ClCompile Include="source\HTcpSocket.cpp" />
+    <ClCompile Include="source\HUdpSocket.cpp" />
+    <ClCompile Include="source\IPv4Address.cpp" />
+    <ClCompile Include="source\Message.cpp" />
+    <ClCompile Include="source\pch.cpp" />
+    <ClCompile Include="source\util.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="hclient.cpp" />
-    <ClCompile Include="HTcpSocket.cpp" />
-    <ClCompile Include="HUdpSocket.cpp" />
-    <ClCompile Include="IPv4Address.cpp" />
-    <ClCompile Include="Message.cpp" />
-    <ClCompile Include="pch.cpp">
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
-      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
-    </ClCompile>
-    <ClCompile Include="hsocket.cpp" />
-    <ClCompile Include="util.cpp" />
+    <ClInclude Include="header\framework.h" />
+    <ClInclude Include="header\hclient.h" />
+    <ClInclude Include="header\HSocket.h" />
+    <ClInclude Include="header\HTcpSocket.h" />
+    <ClInclude Include="header\HUdpSocket.h" />
+    <ClInclude Include="header\IPv4Address.h" />
+    <ClInclude Include="header\Message.h" />
+    <ClInclude Include="header\pch.h" />
+    <ClInclude Include="header\util.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

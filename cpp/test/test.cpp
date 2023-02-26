@@ -1,5 +1,5 @@
 ﻿#include <iostream>
-#include "../src/hsocket/include/hclient.h"
+#include "../src/hsocket/header/hclient.h"
 #include "../src/hsocket/include/convert/convert.cpp"
 
 #ifdef _DEBUG

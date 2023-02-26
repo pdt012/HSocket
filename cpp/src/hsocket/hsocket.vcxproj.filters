@@ -15,58 +15,58 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\framework.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\HSocket.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\HTcpSocket.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\HUdpSocket.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\IPv4Address.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\pch.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\util.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\Message.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
-    <ClInclude Include="include\hclient.h">
-      <Filter>头文件</Filter>
-    </ClInclude>
+    <ClCompile Include="source\hclient.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\hsocket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\HTcpSocket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\HUdpSocket.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\IPv4Address.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\Message.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\pch.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+    <ClCompile Include="source\util.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="pch.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="util.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="hsocket.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="HTcpSocket.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="HUdpSocket.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="IPv4Address.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="Message.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
-    <ClCompile Include="hclient.cpp">
-      <Filter>源文件</Filter>
-    </ClCompile>
+    <ClInclude Include="header\framework.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\hclient.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\HSocket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\HTcpSocket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\HUdpSocket.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\IPv4Address.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\Message.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\pch.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="header\util.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

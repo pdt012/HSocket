@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include <string>
-#include "./CJsonObject/CJsonObject.hpp"
+#include "../include/CJsonObject/CJsonObject.hpp"
 
 #define HEADER_LENGTH 10
 
