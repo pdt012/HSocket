@@ -65,7 +65,7 @@ public:
 
 	bool sendmsg(const Message &msg) override;
 
-    void setFTTimeout(self, sec) {
+    void setFTTimeout(int sec) {
         ftTimeout = sec;
 	}
 
