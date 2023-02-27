@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <vector>
+#include <map>
 #include <thread>
 #include <condition_variable>
 #include "HTcpSocket.h"
@@ -42,15 +43,35 @@ public:
 
 	std::vector<std::string> recvfiles();
 
+	void setOnConnectedCallback(void (*callback)()) {
+		this->onConnectedCallback = callback;
+	}
+
+	void setOnDisconnectedCallback(void (*callback)()) {
+		this->onDisconnectedCallback = callback;
+	}
+
 protected:
 	virtual bool getFTTransferPort() = 0;
 
 protected:
-	virtual void onDisconnected() abstract;
+	void onConnected() {
+		if (onConnectedCallback)
+			onConnectedCallback();
+	}
+
+	void onDisconnected() {
+		if (onDisconnectedCallback)
+			onDisconnectedCallback();
+	}
+
+private:
+	void (*onConnectedCallback)() = nullptr;
+	void (*onDisconnectedCallback)() = nullptr;
 };
 
 
-class HTcpChannelClient abstract : public HTcpClient
+class HTcpChannelClient : public HTcpClient
 {
 private:
 	std::thread thMessage;
@@ -69,17 +90,33 @@ public:
         ftTimeout = sec;
 	}
 
+	void setOnMsgRecvByOpCodeCallback(ushort opcode, bool (*callback)(Message& msg)) {
+		this->onMsgRecvByOpCodeCallbackMap.insert({ opcode, callback });
+	}
+
+	void popOnMsgRecvByOpCodeCallback(ushort opcode) {
+		this->onMsgRecvByOpCodeCallbackMap.erase(opcode);
+	}
+
+	void setOnMessageReceivedCallback(void (*callback)(Message& msg)) {
+		this->onMessageReceivedCallback = callback;
+	}
+
 private:
 	void messageHandle();
 
 protected:
 	bool getFTTransferPort() override;
 
-	virtual void onMessageReceived(Message &msg) abstract;
+	void onMessageReceived(Message &msg);
+
+private:
+	void (*onMessageReceivedCallback)(Message& msg) = nullptr;
+	std::map<ushort, bool (*)(Message& msg)> onMsgRecvByOpCodeCallbackMap;
 };
 
 
-class HTcpReqResClient abstract : public HTcpClient
+class HTcpReqResClient : public HTcpClient
 {
 public:
 	HTcpReqResClient();

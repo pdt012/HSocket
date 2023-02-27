@@ -17,18 +17,11 @@
 #endif
 
 
-class SynTcpClientApp : public HTcpReqResClient {
-public:
-	SynTcpClientApp() :HTcpReqResClient() {}
-
-	void onDisconnected() {}
-};
-
 
 int main()
 {
 	try {
-		SynTcpClientApp client;
+		HTcpReqResClient client;
 		client.connect(IPv4Address("127.0.0.1", 40000));
 		std::cout << "start" << std::endl;
 		while (true) {
@@ -50,20 +43,28 @@ int main()
 			case 100:
 				client.sendmsg(Message::HeaderOnlyMsg(100));
 				client.sendfile("testfile/test1.txt", "test1_by_cpp_client.txt");
+				std::cout << "send file" << std::endl;
 				break;
-			case 101:
+			case 101: {
 				client.sendmsg(Message::HeaderOnlyMsg(101));
-				client.recvfile();
+				std::string path = client.recvfile();
+				std::cout << "recv file" << "'" << path << "'" << std::endl; }
 				break;
 			case 110: {
 				client.sendmsg(Message::HeaderOnlyMsg(110));
 				std::vector<std::string> pathlist = { "testfile/test1.txt", "testfile/test2.txt" };
 				std::vector<std::string> namelist = { "test1_by_cpp_client.txt", "test2_by_cpp_client.txt" };
-				client.sendfiles(pathlist, namelist); }
+				int count = client.sendfiles(pathlist, namelist);
+				std::cout << "send files" << "(" << count << ")" << std::endl; }
 					break;
-			case 111:
+			case 111: {
 				client.sendmsg(Message::HeaderOnlyMsg(111));
-				client.recvfiles();
+				std::vector<std::string> paths = client.recvfiles();
+				std::cout << "recv files" << "[";
+				for (std::string path : paths) {
+					std::cout << "'" << path << "', ";
+				}
+				std::cout << "]" << std::endl; }
 				break;
 			default:
 				break;

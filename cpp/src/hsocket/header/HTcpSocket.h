@@ -2,6 +2,8 @@
 #include "HSocket.h"
 #include "Message.h"
 
+typedef SOCKET SOCKET;
+
 namespace SocketConfig {
 	extern int RECV_BUFFER_SIZE;
 	extern int FILE_BUFFER_SIZE;
@@ -12,6 +14,10 @@ class HTcpSocket : public HSocket
 {
 public:
 	HTcpSocket();
+
+	HTcpSocket accept() {
+		return HTcpSocket(HSocket::accept());
+	}
 
 	/**
 	 * @brief 发送一个数据包
@@ -41,4 +47,8 @@ public:
 	 * @return 成功接收的文件路径，若接收失败则返回空字符串
 	*/
 	std::string recvFile();
+
+protected:
+	HTcpSocket(SOCKET sock) :HSocket(sock) {}
+
 };

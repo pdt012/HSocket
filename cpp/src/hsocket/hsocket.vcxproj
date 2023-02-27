@@ -180,7 +180,12 @@ xcopy "$(ProjectDir)include\*" "$(OutDir)include\$(ProjectName)" /s /y</Command>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="source\hclient.cpp" />
-    <ClCompile Include="source\hsocket.cpp" />
+    <ClCompile Include="source\hsocket.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
+    </ClCompile>
     <ClCompile Include="source\HTcpSocket.cpp" />
     <ClCompile Include="source\HUdpSocket.cpp" />
     <ClCompile Include="source\IPv4Address.cpp" />

@@ -66,7 +66,13 @@ std::string HTcpSocket::recvFile()
 	// filename
 	std::string filename;
 	while (true) {
-		std::string s = this->recv(1);
+		std::string s;
+		try {
+			s = this->recv(1);
+		}
+		catch (SocketError e) {
+			return "";
+		}
 		char c = s[0];
 		if (c != '\0')
 			filename += c;

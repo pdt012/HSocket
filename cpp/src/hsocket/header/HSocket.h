@@ -117,14 +117,14 @@ public:
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
-	HSocket accept() {
+	SOCKET accept() {
 		SOCKADDR clientAddr;
 		int size = sizeof(SOCKADDR);
 		SOCKET clientSock = ::accept(handle, (SOCKADDR *)&clientAddr, &size);
 		if (clientSock == INVALID_SOCKET)
 			throw SocketError();
 		else
-			return HSocket(clientSock);
+			return clientSock;
 	}
 
 	/**
@@ -221,11 +221,11 @@ public:
 		handle = -1;
 	}
 
-private:
+protected:
 	HSocket(SOCKET sock) {
 		this->handle = sock;
 	}
 
-private:
+protected:
 	SOCKET handle = NULL;
 };
