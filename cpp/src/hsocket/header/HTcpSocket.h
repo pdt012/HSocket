@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "HSocket.h"
-#include "Message.h"
+#include "message.h"
 
 typedef SOCKET SOCKET;
 

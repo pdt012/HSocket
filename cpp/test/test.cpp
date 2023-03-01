@@ -31,15 +31,6 @@ int main()
 			if (std::cin.fail()) break;
 			switch (code)
 			{
-			case 0: {
-				neb::CJsonObject json;
-				json.Add("text0", "<0>test message send by c++ client");
-				Message msg = Message::JsonMsg(0, 0, json);
-				Message replyMsg = client.request(msg);
-				if (replyMsg.isValid()) {
-					std::cout << replyMsg.toString() << std::endl;
-				}}
-				  break;
 			case 100:
 				client.sendmsg(Message::HeaderOnlyMsg(100));
 				client.sendfile("testfile/test1.txt", "test1_by_cpp_client.txt");
@@ -66,8 +57,17 @@ int main()
 				}
 				std::cout << "]" << std::endl; }
 				break;
-			default:
-				break;
+			default: {
+				neb::CJsonObject json;
+				std::stringstream sstream;
+				sstream << "test message<" << code << "> send by c++ client";
+				json.Add("text", sstream.str());
+				Message msg = Message::JsonMsg(code, json);
+				Message replyMsg = client.request(msg);
+				if (replyMsg.isValid()) {
+					std::cout << replyMsg.toString() << std::endl;
+				}}
+				  break;
 			}
 		}
 	}

@@ -1,13 +1,14 @@
 ﻿#pragma once
 #include <string>
+#include <sstream>
 #include "../include/CJsonObject/CJsonObject.hpp"
 
-#define HEADER_LENGTH 10
+#define HEADER_LENGTH 8
 
 typedef unsigned short ushort;
 
 
-enum ContentType : short
+enum ContentType : ushort
 {
 	NONE = 0x0,  // 空报文
 	ERROR_ = 0x1,  // 错误报文
@@ -18,12 +19,32 @@ enum ContentType : short
 };
 
 
+inline std::string getContentTpeName(ContentType contenttype) {
+	switch (contenttype)
+	{
+	case NONE:
+		return "NONE";
+	case ERROR_:
+		return "ERROR";
+	case HEADERONLY:
+		return "HEADERONLY";
+	case PLAINTEXT:
+		return "PLAINTEXT";
+	case JSONOBJRCT:
+		return "JSONOBJRCT";
+	case BINARY:
+		return "BINARY";
+	default:
+		return "";
+	}
+}
+
+
 #pragma pack(2)
 struct Header
 {
-	ushort contenttype;  // 报文内容码
+	ContentType contenttype;  // 报文内容码
 	ushort opcode;  // 操作码
-	ushort statuscode;  // 状态码
 	int length;  // 报文长度
 };
 #pragma pack()
@@ -32,15 +53,14 @@ struct Header
 class Message
 {
 private:
-	ushort __contenttype;  // 报文内容码
+	ContentType __contenttype;  // 报文内容码
 	ushort __opcode;  // 操作码
-	ushort __statuscode;  // 状态码
-	std::string __content;  // 
-	neb::CJsonObject *__json = nullptr;  //
+	std::string __content;
+	neb::CJsonObject *__json = nullptr;
 
 public:
-	Message(ushort contenttype = ContentType::NONE, ushort opcode = 0, ushort statuscode = 0, const std::string &content = "")
-		: __contenttype(contenttype), __opcode(opcode), __statuscode(statuscode), __content(content)
+	Message(ContentType contenttype = ContentType::NONE, ushort opcode = 0, const std::string &content = "")
+		: __contenttype(contenttype), __opcode(opcode), __content(content)
 	{
 		if (!content.empty()) {
 
@@ -57,7 +77,7 @@ public:
 	}
 
 	Message(const Message &msg)
-		: __contenttype(msg.__contenttype), __opcode(msg.__opcode), __statuscode(msg.__statuscode), __content(msg.__content)
+		: __contenttype(msg.__contenttype), __opcode(msg.__opcode), __content(msg.__content)
 	{
 		this->__json = new neb::CJsonObject(msg.__json);
 	}
@@ -68,23 +88,23 @@ public:
 
 	/*由Header和正文内容组成Message*/
 	Message(Header &header, const std::string &content)
-		: Message(header.contenttype, header.opcode, header.statuscode, content)
+		: Message(header.contenttype, header.opcode, content)
 	{
 	}
 
 	/*不含正文的Message*/
-	static Message HeaderOnlyMsg(ushort opcode = 0, ushort statuscode = 0) {
-		return Message(ContentType::HEADERONLY, opcode, statuscode);
+	static Message HeaderOnlyMsg(ushort opcode = 0) {
+		return Message(ContentType::HEADERONLY, opcode);
 	}
 
 	/*正文为纯文本的Message*/
-	static Message PlainTextMsg(ushort opcode = 0, ushort statuscode = 0, const std::string &text = "") {
-		return Message(ContentType::PLAINTEXT, opcode, statuscode, text);
+	static Message PlainTextMsg(ushort opcode = 0, const std::string &text = "") {
+		return Message(ContentType::PLAINTEXT, opcode, text);
 	}
 
 	/*正文为json对象的Message*/
-	static Message JsonMsg(ushort opcode, ushort statuscode, neb::CJsonObject &json) {
-		Message msg = Message(ContentType::JSONOBJRCT, opcode, statuscode);
+	static Message JsonMsg(ushort opcode, neb::CJsonObject &json) {
+		Message msg = Message(ContentType::JSONOBJRCT, opcode);
 		msg.__json = new neb::CJsonObject(json);
 		return msg;
 	}
@@ -95,18 +115,13 @@ public:
 	}
 
 	/*获取内容码*/
-	ushort contenttype() {
+	ContentType contenttype() {
 		return this->__contenttype;
 	}
 
 	/*获取操作码*/
 	ushort opcode() {
 		return this->__opcode;
-	}
-
-	/*获取状态码*/
-	ushort statuscode() {
-		return this->__statuscode;
 	}
 
 	/*直接获取正文*/
@@ -142,7 +157,7 @@ public:
 		return value;
 	}
 
-	std::string toString() const {
+	std::string toBytes() const {
 		std::string cont;
 		if (__contenttype == ContentType::HEADERONLY)
 			cont = "";
@@ -153,18 +168,25 @@ public:
 		else
 			cont = __content;
 		int length = cont.size();  // 数据包长度(不包含报头)
-		Header header = Header{ __contenttype, __opcode, __statuscode, length };
+		Header header = Header{ __contenttype, __opcode, length };
 		char buf[HEADER_LENGTH];
 		memcpy_s(buf, sizeof(buf), &header, HEADER_LENGTH);
 		return std::string(buf, HEADER_LENGTH) + cont;
 	}
 
-	static Message fromString(const std::string &data) {
+	static Message fromBytes(const std::string &data) {
 		if (data.size() < HEADER_LENGTH)
 			return Message();
 		Header header;
 		memcpy_s(&header, HEADER_LENGTH, data.c_str(), HEADER_LENGTH);
 		return Message(header, data.substr(HEADER_LENGTH));
+	}
+
+	std::string toString() const {
+		std::stringstream sstream;
+		sstream << "<Message>" << "(" << getContentTpeName(__contenttype) << ") " << "opcode: " << __opcode << "\n"
+			<< "content:\n" << __content;
+		return sstream.str();
 	}
 
 };

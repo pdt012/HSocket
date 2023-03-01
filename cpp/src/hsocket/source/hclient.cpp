@@ -75,7 +75,7 @@ int HTcpClient::sendfiles(std::vector<std::string> paths, std::vector<std::strin
 		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
 		neb::CJsonObject json;
 		json.Add("file_count", paths.size());
-		Message filesHeaderMsg = Message::JsonMsg(BuiltInOpCode::FT_SEND_FILES_HEADER, 0, json);
+		Message filesHeaderMsg = Message::JsonMsg(BuiltInOpCode::FT_SEND_FILES_HEADER, json);
 		ftSocket.sendMsg(filesHeaderMsg);
 	}
 	catch (SocketError e) {

@@ -30,7 +30,7 @@
     <ClCompile Include="source\IPv4Address.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\Message.cpp">
+    <ClCompile Include="source\message.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\pch.cpp">
@@ -59,7 +59,7 @@
     <ClInclude Include="header\IPv4Address.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="header\Message.h">
+    <ClInclude Include="header\message.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="header\pch.h">
