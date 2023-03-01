@@ -1,6 +1,6 @@
 # app
-test/testfile/
-test/download/
+tests/testfile/
+tests/download/
 
 # PyCharm
 .idea/
