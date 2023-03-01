@@ -4,11 +4,12 @@
 
 typedef SOCKET SOCKET;
 
-namespace SocketConfig {
-	extern int RECV_BUFFER_SIZE;
-	extern int FILE_BUFFER_SIZE;
-	const char DEFAULT_DOWNLOAD_PATH[] = "download/";
-}
+class SocketConfig {
+public:
+	static inline int RECV_BUFFER_SIZE = 1024;
+	static inline int FILE_BUFFER_SIZE = 2048;
+	static inline std::string DEFAULT_DOWNLOAD_PATH = "download/";
+};
 
 class HTcpSocket : public HSocket
 {

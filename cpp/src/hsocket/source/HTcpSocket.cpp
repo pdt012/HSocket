@@ -6,11 +6,6 @@
 
 #define USE_UNICODE_FILEPATHS
 
-namespace SocketConfig {
-	int RECV_BUFFER_SIZE = 1024;
-	int FILE_BUFFER_SIZE = 2048;
-}
-
 HTcpSocket::HTcpSocket()
 	: HSocket(PF_INET, SOCK_STREAM, IPPROTO_TCP)
 {
@@ -85,8 +80,8 @@ std::string HTcpSocket::recvFile()
 	memcpy_s(&filesize, 4, filesize_b.c_str(), 4);
 	// file content
 	if (!filename.empty() && filesize > 0) {
-		if (!fileutil::exists(SocketConfig::DEFAULT_DOWNLOAD_PATH))
-			fileutil::mkdir(SocketConfig::DEFAULT_DOWNLOAD_PATH);
+		if (!fileutil::exists(SocketConfig::DEFAULT_DOWNLOAD_PATH.c_str()))
+			fileutil::mkdir(SocketConfig::DEFAULT_DOWNLOAD_PATH.c_str());
 		std::string downPath = pathutil::join(SocketConfig::DEFAULT_DOWNLOAD_PATH, filename);
 		int totalRecvSize = 0;  // 收到的字节数
 #ifdef USE_UNICODE_FILEPATHS
