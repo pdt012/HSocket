@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "IPv4Address.h"
+#include "ipaddress.h"
 #include <WinSock2.h>
 #pragma comment (lib, "ws2_32.lib")
 
@@ -122,7 +122,7 @@ public:
 	 * @throw SocketError 连接异常时抛出
 	*/
 	void bind(const char *ip, unsigned short port) {
-		sockaddr_in saddr = v4addr_to_sockaddr(ip, port);
+		sockaddr_in saddr = IPv4Address::to_sockaddr_in(ip, port);
 		int ret = ::bind(handle, (SOCKADDR *)&saddr, sizeof(SOCKADDR));
 		THROW_IF_SOCKET_ERROR(ret);
 	}
@@ -131,7 +131,7 @@ public:
 	 * @throw SocketError 连接异常时抛出
 	*/
 	void connect(const char *ip, unsigned short port) {
-		sockaddr_in saddr = v4addr_to_sockaddr(ip, port);
+		sockaddr_in saddr = IPv4Address::to_sockaddr_in(ip, port);
 		int ret = ::connect(handle, (SOCKADDR *)&saddr, sizeof(SOCKADDR));
 		THROW_IF_SOCKET_ERROR(ret);
 	}

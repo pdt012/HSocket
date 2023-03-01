@@ -27,10 +27,10 @@
     <ClCompile Include="source\HUdpSocket.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\IPv4Address.cpp">
+    <ClCompile Include="source\ipaddress.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
-    <ClCompile Include="source\message.cpp">
+    <ClCompile Include="source\hmessage.cpp">
       <Filter>源文件</Filter>
     </ClCompile>
     <ClCompile Include="source\pch.cpp">
@@ -56,10 +56,10 @@
     <ClInclude Include="header\HUdpSocket.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="header\IPv4Address.h">
+    <ClInclude Include="header\ipaddress.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="header\message.h">
+    <ClInclude Include="header\hmessage.h">
       <Filter>头文件</Filter>
     </ClInclude>
     <ClInclude Include="header\pch.h">

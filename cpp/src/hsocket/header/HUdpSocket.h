@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "HSocket.h"
-#include "message.h"
+#include "hmessage.h"
 
 class HUdpSocket : public HSocket
 {

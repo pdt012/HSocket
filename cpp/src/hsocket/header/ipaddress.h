@@ -7,15 +7,20 @@ class IPv4Address
 public:
 	std::string ip;
 	unsigned short port;
+
+public:
 	IPv4Address() : ip(""), port(0) {};
 	IPv4Address(const std::string &ip, unsigned short port) : ip(ip), port(port) {};
+
 	/*生成 SOCKADDR 网络地址*/
 	sockaddr_in to_sockaddr_in() const;
+
+	/*从 SOCKADDR 构建*/
 	static IPv4Address from_sockaddr(SOCKADDR sockaddr);
+
+	/*生成 SOCKADDR 网络地址*/
+	static sockaddr_in to_sockaddr_in(const std::string &ip, unsigned short port);
 };
-
-
-sockaddr_in v4addr_to_sockaddr(const std::string &ip, unsigned short port);
 
 
 /*地址错误*/

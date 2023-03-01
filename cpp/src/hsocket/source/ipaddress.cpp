@@ -1,11 +1,11 @@
 ﻿#include "pch.h"
-#include "IPv4Address.h"
+#include "ipaddress.h"
 #include <WS2tcpip.h>
 #include <fstream>
 
 sockaddr_in IPv4Address::to_sockaddr_in() const
 {
-	return v4addr_to_sockaddr(this->ip, this->port);
+	return to_sockaddr_in(this->ip, this->port);
 }
 
 IPv4Address IPv4Address::from_sockaddr(SOCKADDR sockaddr)
@@ -17,8 +17,7 @@ IPv4Address IPv4Address::from_sockaddr(SOCKADDR sockaddr)
 	return IPv4Address(ip_buf, ntohs(sin->sin_port));
 }
 
-
-sockaddr_in v4addr_to_sockaddr(const std::string &ip, unsigned short port)
+sockaddr_in IPv4Address::to_sockaddr_in(const std::string& ip, unsigned short port)
 {
 	sockaddr_in sin;
 	memset(&sin, 0, sizeof(sin));  // 0填充
