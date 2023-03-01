@@ -23,6 +23,8 @@ int main()
 	try {
 		HTcpReqResClient client;
 		client.connect(IPv4Address("127.0.0.1", 40000));
+		client.socket().setblocking(true);
+		client.socket().settimeout(5000);
 		std::cout << "start" << std::endl;
 		while (true) {
 			int code = -1;

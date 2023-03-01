@@ -22,7 +22,7 @@ protected:
 public:
 	HTcpClient();
 
-	HTcpSocket socket() {
+	HTcpSocket &socket() {
 		return tcpSocket;
 	}
 
