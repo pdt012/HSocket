@@ -15,7 +15,7 @@ class EmptyMessageError(MessageError):
 
 
 class MessageHeaderError(MessageError):
-    """error in loading a message header."""
+    """Error in loading a message header."""
     ...
 
 

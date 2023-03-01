@@ -48,9 +48,10 @@ class HTcpSocket(_HSocket):
             OSError: 套接字异常时抛出。
             EmptyMessageError: 收到空报文时抛出
             MessageHeaderError: 报头解析异常时抛出
+            UnicodeDecodeError: 报文内容编码异常时抛出
 
         Returns:
-            Message: 收到空报文时返回空Message
+            Message: 收到的报文
         """
         data = b""
         header = Header.fromBytes(self.recv(Header.HEADER_LENGTH))
