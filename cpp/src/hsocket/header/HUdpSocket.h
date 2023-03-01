@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "HSocket.h"
-#include "Message.h"
+#include "message.h"
 
 class HUdpSocket : public HSocket
 {
@@ -18,6 +18,8 @@ public:
 	/**
 	 * @brief 接收一个数据包
 	 * @param addr 返回发送方地址
+     * @throw EmptyMessageError: 收到空报文时抛出
+     * @throw MessageHeaderError: 报头解析异常时抛出
 	 * @return 数据包(可能为Error包或空包)
 	*/
 	Message recvMsg(IPv4Address *addr);

@@ -46,24 +46,24 @@ class HTcpSocket(_HSocket):
         Raises:
             TimeoutError: 阻塞模式下等待超时时抛出。
             OSError: 套接字异常时抛出。
+            EmptyMessageError: 收到空报文时抛出
+            MessageHeaderError: 报头解析异常时抛出
+            UnicodeDecodeError: 报文内容编码异常时抛出
 
         Returns:
-            Message: 收到空报文时返回空Message
+            Message: 收到的报文
         """
         data = b""
         header = Header.fromBytes(self.recv(Header.HEADER_LENGTH))
-        if header:
-            size = header.length
-            while len(data) < size:  # 未接收完
-                recv_size = min(size - len(data), SocketConfig.RECV_BUFFER_SIZE)
-                recv_data = self.recv(recv_size)
-                data += recv_data
-            if data:
-                return Message.HeaderContent(header, data.decode(MessageConfig.ENCODING))
-            else:
-                return Message.HeaderContent(header, "")
+        size = header.length
+        while len(data) < size:  # 未接收完
+            recv_size = min(size - len(data), SocketConfig.RECV_BUFFER_SIZE)
+            recv_data = self.recv(recv_size)
+            data += recv_data
+        if data:
+            return Message.HeaderContent(header, data.decode(MessageConfig.ENCODING))
         else:
-            return Message()
+            return Message.HeaderContent(header, "")
 
     def sendFile(self, file: BinaryIO, filename: str):
         """发送一个文件
@@ -148,17 +148,20 @@ class HUdpSocket(_HSocket):
         data = msg.toBytes()
         return self.sendto(data, address) == len(data)
 
-    def recvMsg(self) -> tuple[Message, Optional[tuple[str, int]]]:
+    def recvMsg(self) -> tuple[Message, tuple[str, int]]:
         """接收一个数据包
-        
+
         Raises:
             TimeoutError: 阻塞模式下等待超时时抛出。
+            EmptyMessageError: 收到空报文时抛出
+            MessageHeaderError: 报头解析异常时抛出
+            UnicodeDecodeError: 报文内容编码异常时抛出
 
         Returns:
-            tuple[Message, Optional[tuple[str, int]]]: 数据包(可能为Error包或空包)，源地址
+            tuple[Message, tuple[str, int]]: 数据包，源地址
         """
         try:
             data, from_ = self.recvfrom(65535)
         except ConnectionResetError:  # received an ICMP unreachable
-            return Message(ContentType.ERROR_), None
+            raise EmptyMessageError()
         return Message.fromBytes(data), from_

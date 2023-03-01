@@ -32,11 +32,11 @@ def onMessageReceived(conn: HTcpSocket, msg: Message):
         case 0:
             text = msg.get("text")
             print(addr, text)
-            conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 0"))
+            conn.sendMsg(Message.JsonMsg(0, reply="hello 0"))
         case 1:
             text = msg.get("text")
             print(addr, text)
-            conn.sendMsg(Message.JsonMsg(0, 1, reply="hello 1"))
+            conn.sendMsg(Message.JsonMsg(0, reply="hello 1"))
         case _:
             pass
 

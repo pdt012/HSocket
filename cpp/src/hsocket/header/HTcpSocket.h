@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "HSocket.h"
-#include "Message.h"
+#include "message.h"
 
 typedef SOCKET SOCKET;
 
@@ -15,6 +15,9 @@ class HTcpSocket : public HSocket
 public:
 	HTcpSocket();
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	HTcpSocket accept() {
 		return HTcpSocket(HSocket::accept());
 	}
@@ -29,6 +32,8 @@ public:
 	/**
 	 * @brief 尝试接收一个数据包
 	 * @throw SocketError 连接异常时抛出
+     * @throw EmptyMessageError: 收到空报文时抛出
+     * @throw MessageHeaderError: 报头解析异常时抛出
 	 * @return 收到空报文时返回空Message
 	*/
 	Message recvMsg();

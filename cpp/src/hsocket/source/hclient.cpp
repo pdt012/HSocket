@@ -75,7 +75,7 @@ int HTcpClient::sendfiles(std::vector<std::string> paths, std::vector<std::strin
 		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
 		neb::CJsonObject json;
 		json.Add("file_count", paths.size());
-		Message filesHeaderMsg = Message::JsonMsg(BuiltInOpCode::FT_SEND_FILES_HEADER, 0, json);
+		Message filesHeaderMsg = Message::JsonMsg(BuiltInOpCode::FT_SEND_FILES_HEADER, json);
 		ftSocket.sendMsg(filesHeaderMsg);
 	}
 	catch (SocketError e) {
@@ -116,12 +116,18 @@ std::vector<std::string> HTcpClient::recvfiles()
 		Message filesHeaderMsg = ftSocket.recvMsg();
 		int fileCount = filesHeaderMsg.getInt("file_count");
 		for (int i = 0; i < fileCount; i++) {
-			std::string path = ftSocket.recvFile();
-			if (!path.empty())
-				downPathList.push_back(path);
+			try {
+				std::string path = ftSocket.recvFile();
+				if (!path.empty())
+					downPathList.push_back(path);
+			}
+			catch (SocketError e) {
+				break;
+			}
 		}
 	}
 	catch (SocketError e) {}
+	catch (MessageError e) {}
 	ftSocket.close();
 	return downPathList;
 }
@@ -164,13 +170,17 @@ void HTcpChannelClient::messageHandle()
 				conFTPort.notify_one();
 				continue;
 			}
-			if (msg.isValid())
-				this->onMessageReceived(msg);
+			this->onMessageReceived(msg);
 		}
 		catch (SocketError e) {
 			if (e.getErrcode() == EAGAIN || e.getErrcode() == EWOULDBLOCK) {
 				continue;
 			}
+			this->onDisconnected();
+			this->close();
+			break;
+		}
+		catch (MessageError e) {
 			this->onDisconnected();
 			this->close();
 			break;
@@ -222,20 +232,27 @@ bool HTcpReqResClient::sendmsg(const Message &msg)
 	return true;
 }
 
-Message HTcpReqResClient::request(const Message &msg)
+std::optional<Message> HTcpReqResClient::request(const Message &msg)
 {
 	if (this->sendmsg(msg)) {
+		bool flagError = false;
 		try {
 			Message response = tcpSocket.recvMsg();
 			return response;
 		}
 		catch (SocketError e) {
+			flagError = true;
+		}
+		catch (MessageError e) {
+			flagError = true;  // 收到空包文时断开
+		}
+		if (flagError) {
 			this->onDisconnected();
 			this->close();
-			return Message(ContentType::ERROR_);
+			return std::nullopt;
 		}
 	}
-	return Message(ContentType::ERROR_);
+	return std::nullopt;
 }
 
 bool HTcpReqResClient::getFTTransferPort()
@@ -250,6 +267,9 @@ bool HTcpReqResClient::getFTTransferPort()
 			return false;
 	}
 	catch (SocketError e) {
+		return false;
+	}
+	catch (MessageError e) {
 		return false;
 	}
 }

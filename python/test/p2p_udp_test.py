@@ -31,9 +31,9 @@ if __name__ == '__main__':
                 response = None
                 match code:
                     case 0:
-                        response = client.send(Message.JsonMsg(code, 0, text0="<0>test message send by peer"))
+                        response = client.send(Message.JsonMsg(code, text0="<0>test message send by peer"))
                     case 1:
-                        response = client.send(Message.JsonMsg(code, 0, text1="<1>test message send by peer"))
+                        response = client.send(Message.JsonMsg(code, text1="<1>test message send by peer"))
                     case _:
                         pass
                 print(response)

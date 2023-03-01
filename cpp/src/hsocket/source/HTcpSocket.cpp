@@ -18,7 +18,7 @@ HTcpSocket::HTcpSocket()
 
 void HTcpSocket::sendMsg(const Message &msg)
 {
-	sendall(msg.toString());
+	sendall(msg.toBytes());
 }
 
 Message HTcpSocket::recvMsg()

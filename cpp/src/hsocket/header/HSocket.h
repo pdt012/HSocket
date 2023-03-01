@@ -62,28 +62,43 @@ public:
 		return handle != -1;
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void settimeout(int msec) {
 		int timeout = msec;
 		this->setsockopt(SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(int));
 		this->setsockopt(SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(int));
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void setblocking(bool blocking) {
 		u_long arg = !blocking;
 		int ret = ioctlsocket(handle, FIONBIO, &arg);
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void setsockopt(int level, int optname, const char *optval, int optlen) {
 		int ret = ::setsockopt(handle, level, optname, optval, optlen);
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void getsockopt(int level, int optname, char *optval, int *optlen) {
 		int ret = ::getsockopt(handle, level, optname, optval, optlen);
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	IPv4Address getsockname() {
 		SOCKADDR name;
 		int namelen = 0;
@@ -92,6 +107,9 @@ public:
 		return IPv4Address::from_sockaddr(name);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	IPv4Address getpeername() {
 		SOCKADDR name;
 		int namelen = 0;
@@ -100,23 +118,35 @@ public:
 		return IPv4Address::from_sockaddr(name);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void bind(const char *ip, unsigned short port) {
 		sockaddr_in saddr = v4addr_to_sockaddr(ip, port);
 		int ret = ::bind(handle, (SOCKADDR *)&saddr, sizeof(SOCKADDR));
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void connect(const char *ip, unsigned short port) {
 		sockaddr_in saddr = v4addr_to_sockaddr(ip, port);
 		int ret = ::connect(handle, (SOCKADDR *)&saddr, sizeof(SOCKADDR));
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void listen(int backlog) {
 		int ret = ::listen(handle, backlog);
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	SOCKET accept() {
 		SOCKADDR clientAddr;
 		int size = sizeof(SOCKADDR);
@@ -208,11 +238,17 @@ public:
 		}
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void shutdown(int how) {
 		int ret = ::shutdown(handle, how);
 		THROW_IF_SOCKET_ERROR(ret);
 	}
 
+	/**
+	 * @throw SocketError 连接异常时抛出
+	*/
 	void close() {
 		if (!this->isValid())
 			return;

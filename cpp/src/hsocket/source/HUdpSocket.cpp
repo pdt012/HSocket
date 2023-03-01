@@ -8,12 +8,12 @@ HUdpSocket::HUdpSocket()
 
 bool HUdpSocket::sendMsg(const Message &msg, const IPv4Address &addr)
 {
-	std::string data = msg.toString();
+	std::string data = msg.toBytes();
 	return sendto(data, addr) == data.size();
 }
 
 Message HUdpSocket::recvMsg(IPv4Address *addr)
 {
-	Message msg = Message::fromString(recvfrom(addr));
+	Message msg = Message::fromBytes(recvfrom(addr));
 	return msg;
 }

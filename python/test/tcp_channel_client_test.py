@@ -23,7 +23,9 @@ if __name__ == '__main__':
             code = input(">>>")
             if code.isdigit():
                 code = int(code)
-                client.sendmsg(Message.JsonMsg(code, 0, text=f"test message<{code}> send by client"))
+                client.sendmsg(Message.JsonMsg(code, text=f"test message<{code}> send by client"))
+            elif code == "e":  # 发送错误报文
+                client.socket().send(b"\0")
             else:
                 break
     except Exception as e:

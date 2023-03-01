@@ -70,13 +70,13 @@ class _HTcpClient:
         if not self._get_ft_transfer_port():
             return ""
         # recv
-        try:
-            with HTcpSocket() as ft_socket:
+        with HTcpSocket() as ft_socket:
+            try:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
                 down_path = ft_socket.recvFile()
-            return down_path
-        except OSError:
-            return ""
+            except OSError:
+                return ""
+        return down_path
 
     def sendfiles(self, paths: list[str], filenames: list[str]) -> int:
         if not self._get_ft_transfer_port():
@@ -88,7 +88,7 @@ class _HTcpClient:
         with HTcpSocket() as ft_socket:
             try:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
-                files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, 0, {"file_count": len(paths)})
+                files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, {"file_count": len(paths)})
                 ft_socket.sendMsg(files_header_msg)
             except OSError:
                 return count_sent
@@ -114,18 +114,21 @@ class _HTcpClient:
             return []
         # recv
         down_path_list = []
-        try:
-            with HTcpSocket() as ft_socket:
+        with HTcpSocket() as ft_socket:
+            try:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
                 files_header_msg = ft_socket.recvMsg()
-                file_count = files_header_msg.get("file_count")
-                for i in range(file_count):
+            except (OSError, MessageError):
+                return []
+            file_count = files_header_msg.get("file_count")
+            for i in range(file_count):
+                try:
                     path = ft_socket.recvFile()
                     if path:
                         down_path_list.append(path)
-            return down_path_list
-        except OSError:
-            return down_path_list
+                except OSError:
+                    break
+        return down_path_list
 
     def setOnConnectedCallback(self, callback: OnConnectedCallback):
         self.__onConnectedCallback = callback
@@ -189,6 +192,11 @@ class HTcpChannelClient(_HTcpClient):
                 self._onDisconnected()
                 self.close()
                 break
+            except MessageError:
+                print("message error")
+                self._onDisconnected()
+                self.close()
+                break
             else:
                 if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
                     self._ft_server_port = msg.get("port")
@@ -231,20 +239,27 @@ class HTcpReqResClient(_HTcpClient):
             return False
         return True
 
-    def request(self, msg: Message) -> Message:
+    def request(self, msg: Message) -> Optional[Message]:
         if self.sendmsg(msg):
+            flag_error = False
             try:
                 response = self._tcp_socket.recvMsg()
             except TimeoutError:
-                return Message(ContentType.ERROR_)
+                print("time out")
+                flag_error = True  # 如果不断开，可能会在下次request时收到这次的response
             except OSError:
                 print("connection error")
+                flag_error = True
+            except MessageError:
+                print("message error")
+                flag_error = True  # 收到空报文时断开
+            if flag_error:
                 self._onDisconnected()
                 self.close()
-                return Message(ContentType.ERROR_)
+                return None
             else:
                 return response
-        return Message(ContentType.ERROR_)
+        return None
 
     def _get_ft_transfer_port(self) -> bool:
         try:
@@ -256,6 +271,8 @@ class HTcpReqResClient(_HTcpClient):
             else:
                 return False
         except OSError:
+            return False
+        except MessageError:
             return False
 
 
@@ -312,9 +329,10 @@ class HUdpChannelClient(_HUdpClient):
                 msg, addr = self._udp_socket.recvMsg()
             except TimeoutError:
                 continue
+            except MessageError:
+                continue
             else:
-                if msg.isValid():
-                    self._onMessageReceived(msg)
+                self._onMessageReceived(msg)
 
     def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
         self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
@@ -346,8 +364,7 @@ class HUdpReqResClient(_HUdpClient):
             response, addr = self._udp_socket.recvMsg()
         except TimeoutError:
             return None
+        except MessageError:
+            return None
         else:
-            if msg.isValid():
-                return response
-            else:
-                return None
+            return response
