@@ -231,11 +231,10 @@ class HTcpSelectorServer(__HTcpServer):
             except MessageError:
                 flag_error = True
                 print("message error: {}".format(addr))
-                conn.close()  # close connection without onDisconnected callback
             if flag_error:
                 self.remove(conn)
                 print("connection closed (read): {}".format(addr))
-                self.hserver._onDisconnected(conn, addr)  # disconnect callback
+                self.hserver.closeconn(conn)
             else:
                 self.msgs[conn] = msg
                 self.selector.modify(conn, selectors.EVENT_WRITE, self.callback_write)
