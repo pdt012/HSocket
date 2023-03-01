@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include <vector>
 #include <map>
+#include <optional>
 #include <thread>
 #include <condition_variable>
 #include "HTcpSocket.h"
@@ -123,7 +124,7 @@ public:
 
 	bool sendmsg(const Message &msg) override;
 
-	Message request(const Message &msg);
+	std::optional<Message> request(const Message& msg);
 
 protected:
 	bool getFTTransferPort() override;

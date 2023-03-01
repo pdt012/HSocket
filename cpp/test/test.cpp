@@ -63,9 +63,9 @@ int main()
 				sstream << "test message<" << code << "> send by c++ client";
 				json.Add("text", sstream.str());
 				Message msg = Message::JsonMsg(code, json);
-				Message replyMsg = client.request(msg);
-				if (replyMsg.isValid()) {
-					std::cout << replyMsg.toString() << std::endl;
+				std::optional<Message> replyMsg = client.request(msg);
+				if (replyMsg.has_value()) {
+					std::cout << replyMsg->toString() << std::endl;
 				}}
 				  break;
 			}

@@ -5,27 +5,31 @@
 
 #define HEADER_LENGTH 8
 
-typedef unsigned short ushort;
+typedef unsigned short ushort; 
+
+
+/*Base class of message error.*/
+class MessageError : public std::exception {};
+
+/*Received an empty message.*/
+class EmptyMessageError : public MessageError {};
+
+/*Error in loading a message header.*/
+class MessageHeaderError : public MessageError {};
 
 
 enum ContentType : ushort
 {
-	NONE = 0x0,  // 空报文
-	ERROR_ = 0x1,  // 错误报文
-	HEADERONLY = 0x2,  // 只含报头
-	PLAINTEXT = 0x3,  // 纯文本内容
-	JSONOBJRCT = 0x4,  // JSON对象
-	BINARY = 0x5,  // 二进制串
+	HEADERONLY = 0x1,  // 只含报头
+	PLAINTEXT = 0x2,  // 纯文本内容
+	JSONOBJRCT = 0x3,  // JSON对象
+	BINARY = 0x4,  // 二进制串
 };
 
 
 inline std::string getContentTpeName(ContentType contenttype) {
 	switch (contenttype)
 	{
-	case NONE:
-		return "NONE";
-	case ERROR_:
-		return "ERROR";
 	case HEADERONLY:
 		return "HEADERONLY";
 	case PLAINTEXT:
@@ -59,7 +63,7 @@ private:
 	neb::CJsonObject *__json = nullptr;
 
 public:
-	Message(ContentType contenttype = ContentType::NONE, ushort opcode = 0, const std::string &content = "")
+	Message(ContentType contenttype, ushort opcode = 0, const std::string &content = "")
 		: __contenttype(contenttype), __opcode(opcode), __content(content)
 	{
 		if (!content.empty()) {
@@ -107,11 +111,6 @@ public:
 		Message msg = Message(ContentType::JSONOBJRCT, opcode);
 		msg.__json = new neb::CJsonObject(json);
 		return msg;
-	}
-
-	/*是否为非空/非错误包*/
-	bool isValid() {
-		return this->__contenttype != ContentType::NONE && this->__contenttype != ContentType::ERROR_;
 	}
 
 	/*获取内容码*/
@@ -174,9 +173,18 @@ public:
 		return std::string(buf, HEADER_LENGTH) + cont;
 	}
 
+	/**
+	 * @brief 二进制流转换为Message
+	 * @param data 
+	 * @throw EmptyMessageError 收到空报文时抛出
+     * @throw MessageHeaderError 报头解析异常时抛出
+	 * @return Message
+	*/
 	static Message fromBytes(const std::string &data) {
-		if (data.size() < HEADER_LENGTH)
-			return Message();
+		if (data.empty())
+			throw EmptyMessageError();
+		if (data.size() != HEADER_LENGTH)
+			throw MessageHeaderError();
 		Header header;
 		memcpy_s(&header, HEADER_LENGTH, data.c_str(), HEADER_LENGTH);
 		return Message(header, data.substr(HEADER_LENGTH));
