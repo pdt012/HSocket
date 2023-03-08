@@ -9,7 +9,7 @@ static class SocketConfig
 {
     public static int recvBufferSize = 1024;
     public static int fileBufferSize = 2048;
-    public static string downloadPath = "download/";
+    public static string downloadDirectory = "download/";
 }
 
 
@@ -109,11 +109,11 @@ public class HTcpSocket : HSocket
         // file content
         if (filename.Length > 0 && filesize > 0)
         {
-            if (!Directory.Exists(SocketConfig.downloadPath))
-                Directory.CreateDirectory(SocketConfig.downloadPath);
-            string downPath = Path.Join(SocketConfig.downloadPath, filename);
+            if (!Directory.Exists(SocketConfig.downloadDirectory))
+                Directory.CreateDirectory(SocketConfig.downloadDirectory);
+            string downloadPath = Path.Join(SocketConfig.downloadDirectory, filename);
             int totalReceivedSize = 0;
-            using (FileStream file = new(downPath, FileMode.OpenOrCreate, FileAccess.Write))
+            using (FileStream file = new(downloadPath, FileMode.OpenOrCreate, FileAccess.Write))
             {
                 while (totalReceivedSize < filesize)
                 {
@@ -124,7 +124,7 @@ public class HTcpSocket : HSocket
                     totalReceivedSize += receivedSize;
                 }
             }
-            return downPath;
+            return downloadPath;
         }
         else
             return "";
@@ -154,7 +154,7 @@ public class HUdpSocket : HSocket
         }
         catch (SocketException e)
         {
-            if (e.ErrorCode == 10054)  // received an ICMP unreachable
+            if (e.SocketErrorCode == SocketError.ConnectionReset)  // received an ICMP unreachable
                 throw new EmptyMessageError();
         }
     }
