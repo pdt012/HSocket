@@ -114,7 +114,7 @@ private:
 	std::thread thMessage;
 	std::mutex mtxFTPort;
 	std::condition_variable conFTPort;
-	int ftTimeout = 15;
+	int ftTimeout = 15000;
 
 public:
 	HTcpChannelClient();
@@ -127,8 +127,8 @@ public:
      * @brief 设置文件传输的超时时长
      * @param sec 
     */
-    void setFTTimeout(int sec) {
-        ftTimeout = sec;
+    void setFTTimeout(int msec) {
+        ftTimeout = msec;
 	}
 
 	/**
