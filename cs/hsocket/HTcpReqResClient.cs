@@ -13,13 +13,14 @@ public class HTcpReqResClient : HTcpClient
         {
             tcpSocket.SendMsg(msg);
         }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
         catch (SocketException)
         {
-            if (!IsClosed())
-            {
-                OnDisconnected();
-                Close();
-            }
+            OnDisconnected();
+            Close();
             return false;
         }
         return true;
@@ -37,6 +38,10 @@ public class HTcpReqResClient : HTcpClient
             }
             else
                 return false;
+        }
+        catch (ObjectDisposedException)
+        {
+            return false;
         }
         catch (SocketException)
         {

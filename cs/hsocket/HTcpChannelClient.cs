@@ -33,6 +33,10 @@ public class HTcpChannelClient : HTcpClient
         {
             tcpSocket.SendMsg(msg);
         }
+        catch (ObjectDisposedException)
+        {
+            return false;
+        }
         catch (SocketException)
         {
             thMessage?.Join();  // make sure that 'onDisconnected' only runs once
