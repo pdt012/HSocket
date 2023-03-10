@@ -145,17 +145,19 @@ public class HUdpSocket : HSocket
         return SendTo(data, addr) == data.Length;
     }
 
-    public void RecvMsg(ref IPEndPoint senderAddr)
+    public Message RecvMsg(ref IPEndPoint senderAddr)
     {
         try
         {
             EndPoint senderEndPoint = senderAddr;
             int receivedSize = ReceiveFrom(recvBuffer, SocketFlags.None, ref senderEndPoint);
+            return Message.FromBytes(recvBuffer[0..receivedSize]);
         }
         catch (SocketException e)
         {
             if (e.SocketErrorCode == SocketError.ConnectionReset)  // received an ICMP unreachable
                 throw new EmptyMessageError();
+            else throw e;
         }
     }
 }
