@@ -90,7 +90,7 @@ public class Message
                 _text = Encoding.UTF8.GetString(content);
                 break;
             case ContentType.JSONOBJRCT:
-                JsonNode? node = JsonNode.Parse(_binary);
+                JsonNode? node = JsonNode.Parse(content);
                 _json = node?.AsObject();
                 break;
             case ContentType.BINARY:
