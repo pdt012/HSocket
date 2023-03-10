@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "HSocket.h"
-#include "hmessage.h"
+#include "message.h"
 
 typedef SOCKET SOCKET;
 
@@ -25,7 +25,7 @@ public:
 
 	/**
 	 * @brief 发送一个数据包
-	 * @param msg
+	 * @param msg 发送的报文
 	 * @throw SocketError 连接异常时抛出
 	*/
 	void sendMsg(const Message &msg);
@@ -35,7 +35,7 @@ public:
 	 * @throw SocketError 连接异常时抛出
      * @throw EmptyMessageError: 收到空报文时抛出
      * @throw MessageHeaderError: 报头解析异常时抛出
-	 * @return 收到空报文时返回空Message
+	 * @return 收到的报文
 	*/
 	Message recvMsg();
 

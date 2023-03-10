@@ -17,6 +17,7 @@ class _HSocket(socket.socket):
         super().__init__(family, type_, proto, fileno)
 
     def isValid(self) -> bool:
+        """是否为有效的套接字"""
         return self.fileno() != -1
 
 
@@ -35,8 +36,11 @@ class HTcpSocket(_HSocket):
     def sendMsg(self, msg: Message):
         """发送一个数据包
 
+        Args:
+            msg (Message): 发送的文件
+
         Raises:
-            OSError: 套接字异常时抛出。
+            OSError: 套接字异常时抛出
         """
         self.sendall(msg.toBytes())
 
@@ -44,8 +48,8 @@ class HTcpSocket(_HSocket):
         """尝试接收一个数据包
 
         Raises:
-            TimeoutError: 阻塞模式下等待超时时抛出。
-            OSError: 套接字异常时抛出。
+            TimeoutError: 阻塞模式下等待超时时抛出
+            OSError: 套接字异常时抛出
             EmptyMessageError: 收到空报文时抛出
             MessageHeaderError: 报头解析异常时抛出
             UnicodeDecodeError: 报文内容编码异常时抛出
@@ -69,7 +73,8 @@ class HTcpSocket(_HSocket):
         """发送一个文件
 
         Raises:
-            OSError: 套接字异常或文件读取异常时抛出。
+            OSError: 套接字异常或文件读取异常时抛出
+            UnicodeEncodeError: 编码错误时抛出
 
         Args:
             file (BinaryIO): 可读的文件对象
@@ -94,11 +99,12 @@ class HTcpSocket(_HSocket):
         """尝试接收一个文件
 
         Raises:
-            TimeoutError: 阻塞模式下等待超时时抛出。
-            OSError: 套接字异常或文件写入异常时抛出。
+            TimeoutError: 阻塞模式下等待超时时抛出
+            OSError: 套接字异常或文件写入异常时抛出
+            UnicodeDecodeError: 编码错误时抛出
 
         Returns:
-            str: 成功接收的文件路径，若接收失败则返回空字符串。
+            str: 成功接收的文件路径，若接收失败则返回空字符串
         """
         # filename
         filename_b: bytes = b""
@@ -139,7 +145,7 @@ class HUdpSocket(_HSocket):
         """发送一个数据包
 
         Args:
-            msg (Message): 数据包
+            msg (Message): 发送的报文
             address (tuple[str, int]): 目标地址
 
         Returns:

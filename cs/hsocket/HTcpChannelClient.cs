@@ -6,6 +6,11 @@ namespace hsocket;
 
 public class HTcpChannelClient : HTcpClient
 {
+    /// <summary>
+    /// 收到报文时的回调
+    /// </summary>
+    /// <param name="mag">收到的报文</param>
+    /// <returns>是否消化该事件(不在向下传递)</returns>
     public delegate bool OnMessageReceivedCallback(Message mag);
 
     public event OnMessageReceivedCallback? OnMessageReceivedEvent;
@@ -14,6 +19,9 @@ public class HTcpChannelClient : HTcpClient
     private readonly Thread thMessage;
     private readonly Mutex mtxFTPort = new();
 
+    /// <summary>
+    /// 文件传输的超时时长
+    /// </summary>
     public int FtTimeout { get; set; }
 
     public HTcpChannelClient() : base()
@@ -87,6 +95,11 @@ public class HTcpChannelClient : HTcpClient
         }
     }
 
+    /// <summary>
+    /// 设置收到指定操作码报文时的回调
+    /// </summary>
+    /// <param name="opcode">操作码</param>
+    /// <param name="callback">回调方法</param>
     public void SetOnMsgRecvByOpCodeCallback(ushort opcode, OnMessageReceivedCallback callback)
     {
         if (OnMsgRecvByOpCodeCallbackDict.TryGetValue(opcode, out _))
@@ -95,15 +108,24 @@ public class HTcpChannelClient : HTcpClient
             OnMsgRecvByOpCodeCallbackDict.Add(opcode, callback);
     }
 
+    /// <summary>
+    /// 取消收到指定操作码报文时的回调
+    /// </summary>
+    /// <param name="opcode">操作码</param>
     public void PopOnMsgRecvByOpCodeCallback(ushort opcode)
     {
         OnMsgRecvByOpCodeCallbackDict.Remove(opcode);
     }
 
+    /// <summary>
+    /// 设置收到报文时的回调(调用晚于<see cref="SetOnMsgRecvByOpCodeCallback"/>设置的回调)
+    /// </summary>
+    /// <param name="callback">回调方法</param>
     public void SetOnMessageReceivedCallback(OnMessageReceivedCallback callback)
     {
         OnMessageReceivedEvent = callback;
     }
+
     protected bool OnMessageReceived(Message msg)
     {
         // callback by opcode

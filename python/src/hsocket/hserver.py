@@ -59,6 +59,13 @@ class __HTcpServer:
                 return None
 
     def sendfile(self, conn: HTcpSocket, path: str, filename: str):
+        """发送一个文件
+
+        Args:
+            conn (HTcpSocket): 与客户端连接的套接字
+            path (str): 文件路径
+            filename (str): 文件名
+        """
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
             return
@@ -74,6 +81,14 @@ class __HTcpServer:
                 fin.close()
 
     def recvfile(self, conn: HTcpSocket) -> str:
+        """接收一个文件
+
+        Args:
+            conn (HTcpSocket): 与客户端连接的套接字
+
+        Returns:
+            str: 下载的文件路径，失败时返回空字符串
+        """
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
             return ""
@@ -85,6 +100,16 @@ class __HTcpServer:
         return down_path
 
     def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
+        """发送多个文件
+
+        Args:
+            conn (HTcpSocket): 与客户端连接的套接字
+            paths (list[str]): 文件路径列表
+            filenames (list[str]): 文件名列表
+
+        Returns:
+            int: 成功发送的文件数
+        """
         if len(paths) != len(filenames):
             return 0
         c_socket = self._get_ft_transfer_conn(conn)
@@ -115,6 +140,14 @@ class __HTcpServer:
         return count_sent
 
     def recvfiles(self, conn: HTcpSocket) -> list[str]:
+        """接收多个文件
+
+        Args:
+            conn (HTcpSocket): 与客户端连接的套接字
+
+        Returns:
+            list[str]: 下载的文件路径列表
+        """
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
             return []
@@ -135,18 +168,44 @@ class __HTcpServer:
         return down_path_list
 
     def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
+        """设置收到指定操作码报文时的回调
+
+        Args:
+            opcode (int): 操作码
+            callback (OnMessageReceivedCallback): 回调方法
+        """
         self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
 
     def popOnMsgRecvByOpCodeCallback(self, opcode: int):
+        """取消收到指定操作码报文时的回调
+
+        Args:
+            opcode (int): 操作码
+        """
         self.__onMsgRecvByOpCodeCallbackDict.pop(opcode)
 
     def setOnMessageReceivedCallback(self, callback: OnMessageReceivedCallback):
+        """设置收到报文时的回调(调用晚于`setOnMsgRecvByOpCodeCallback`设置的回调)
+
+        Args:
+            callback (OnMessageReceivedCallback): 回调方法
+        """
         self.__onMessageReceivedCallback = callback
 
     def setOnConnectedCallback(self, callback: OnConnectedCallback):
+        """设置某个客户端连接时的回调
+
+        Args:
+            callback (OnConnectedCallback): 回调方法
+        """
         self.__onConnectedCallback = callback
 
     def setOnDisconnectedCallback(self, callback: OnDisconnectedCallback):
+        """设置某个客户端断开连接时的回调
+
+        Args:
+            callback (OnDisconnectedCallback): 回调方法
+        """
         self.__onDisconnectedCallback = callback
 
     def _onMessageReceived(self, conn: HTcpSocket, msg: Message):
@@ -359,6 +418,7 @@ class HUdpServer:
         return self.__udp_socket
 
     def startserver(self):
+        """启动server"""
         self.__udp_socket.bind(self._address)
         while self.__udp_socket.isValid():
             try:
@@ -368,18 +428,41 @@ class HUdpServer:
                 continue
 
     def closeserver(self):
+        """关闭server"""
         self.__udp_socket.close()
 
     def sendto(self, msg: Message, c_addr):
+        """向指定地址发送报文
+
+        Args:
+            msg (Message): 发送的报文
+            c_addr (_type_): 客户端地址
+        """
         self.__udp_socket.sendMsg(msg, c_addr)
 
     def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
+        """设置收到指定操作码报文时的回调
+
+        Args:
+            opcode (int): 操作码
+            callback (OnMessageReceivedCallback): 回调方法
+        """
         self.__onMsgRecvByOpCodeCallbackDict[opcode] = callback
 
     def popOnMsgRecvByOpCodeCallback(self, opcode: int):
+        """取消收到指定操作码报文时的回调
+
+        Args:
+            opcode (int): 操作码
+        """
         self.__onMsgRecvByOpCodeCallbackDict.pop(opcode)
 
     def setOnMessageReceivedCallback(self, callback: OnMessageReceivedCallback):
+        """设置收到报文时的回调(调用晚于`SetOnMsgRecvByOpCodeCallback`设置的回调)
+
+        Args:
+            callback (OnMessageReceivedCallback): 回调方法
+        """
         self.__onMessageReceivedCallback = callback
 
     def _onMessageReceived(self, msg: Message, c_addr: Optional[tuple]):

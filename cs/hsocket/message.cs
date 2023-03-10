@@ -33,6 +33,9 @@ public record struct Header(ContentType Contenttype, ushort Opcode, int Length)
 {
     public const int HEADER_LENGTH = 8;
 
+    /// <summary>
+    /// 转换为二进制流
+    /// </summary>
     public byte[] ToBytes()
     {
         byte[] header = new byte[HEADER_LENGTH];
@@ -72,13 +75,14 @@ public class Message
 
     public Message(ContentType contenttype, ushort opcode)
     {
-        this._contenttype = contenttype;
-        this._opcode = opcode;
+        _contenttype = contenttype;
+        _opcode = opcode;
     }
 
     /// <summary>
     /// 由Header和二进制内容组成Message
     /// </summary>
+    /// <exception cref="EncoderFallbackException"></exception>
     public Message(Header header, byte[] content)
         : this(header.Contenttype, header.Opcode)
     {
@@ -141,8 +145,14 @@ public class Message
         };
     }
 
+    /// <summary>
+    /// 获取内容码
+    /// </summary>
     public ContentType Contenttype { get { return _contenttype; } }
 
+    /// <summary>
+    /// 获取操作码
+    /// </summary>
     public ushort Opcode { get { return _opcode; } }
 
     public string? Text { get { return _text; } }
@@ -175,6 +185,10 @@ public class Message
         return node?.GetValue<string>();
     }
 
+    /// <summary>
+    /// 转换为二进制流
+    /// </summary>
+    /// <exception cref="EncoderFallbackException"></exception>
     public byte[] ToBytes()
     {
         byte[] cont = Array.Empty<byte>();
@@ -201,6 +215,11 @@ public class Message
         return data;
     }
 
+    /// <summary>
+    /// 二进制流转换为Message
+    /// </summary>
+    /// <exception cref="EmptyMessageError">收到空报文时抛出</exception>
+    /// <exception cref="MessageHeaderError">报头解析异常时抛出</exception>
     public static Message FromBytes(byte[] data)
     {
         Header header = Header.FromBytes(data[0..Header.HEADER_LENGTH]);

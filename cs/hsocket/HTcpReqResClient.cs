@@ -53,6 +53,11 @@ public class HTcpReqResClient : HTcpClient
         }
     }
 
+    /// <summary>
+    /// 发送一个请求报文，接收一个响应报文
+    /// </summary>
+    /// <param name="msg">发送的报文</param>
+    /// <returns>接收到的响应报文，失败时返回null</returns>
     public Message? Request(Message msg)
     {
         if (SendMsg(msg))

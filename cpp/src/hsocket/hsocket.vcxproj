@@ -193,7 +193,7 @@ xcopy "$(ProjectDir)include\*" "$(OutDir)include\$(ProjectName)" /s /y</Command>
     <ClCompile Include="source\HTcpSocket.cpp" />
     <ClCompile Include="source\HUdpSocket.cpp" />
     <ClCompile Include="source\ipaddress.cpp" />
-    <ClCompile Include="source\hmessage.cpp" />
+    <ClCompile Include="source\message.cpp" />
     <ClCompile Include="source\pch.cpp" />
     <ClCompile Include="source\util.cpp" />
   </ItemGroup>
@@ -204,7 +204,7 @@ xcopy "$(ProjectDir)include\*" "$(OutDir)include\$(ProjectName)" /s /y</Command>
     <ClInclude Include="header\HTcpSocket.h" />
     <ClInclude Include="header\HUdpSocket.h" />
     <ClInclude Include="header\ipaddress.h" />
-    <ClInclude Include="header\hmessage.h" />
+    <ClInclude Include="header\message.h" />
     <ClInclude Include="header\pch.h" />
     <ClInclude Include="header\util.h" />
   </ItemGroup>

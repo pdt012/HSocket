@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "HSocket.h"
-#include "hmessage.h"
+#include "message.h"
 
 class HUdpSocket : public HSocket
 {
@@ -9,7 +9,7 @@ public:
 
 	/**
 	 * @brief 发送一个数据包
-	 * @param msg 数据包
+	 * @param msg 发送的报文
 	 * @param addr 目标地址
 	 * @return 数据是否全部发送
 	*/

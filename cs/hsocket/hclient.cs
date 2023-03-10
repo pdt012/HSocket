@@ -51,10 +51,25 @@ public abstract class HTcpClient
         return !tcpSocket.IsValid();
     }
 
+    /// <summary>
+    /// 向服务端发送报文
+    /// </summary>
+    /// <param name="msg">发送的报文</param>
+    /// <returns>是否成功</returns>
     public abstract bool SendMsg(Message msg);
 
+    /// <summary>
+    /// 获取服务端的文件传输端口
+    /// </summary>
+    /// <returns>是否成功获取</returns>
     protected abstract bool GetFTTransferPort();
 
+    /// <summary>
+    /// 发送一个文件
+    /// </summary>
+    /// <param name="path">文件路径</param>
+    /// <param name="filename">文件名</param>
+    /// <exception cref="NullReferenceException"></exception>
     public void SendFile(string path, string filename)
     {
         if (ftServerIp == null)
@@ -80,6 +95,11 @@ public abstract class HTcpClient
         }
     }
 
+    /// <summary>
+    /// 接收一个文件
+    /// </summary>
+    /// <returns>下载的文件路径，失败时返回空字符串</returns>
+    /// <exception cref="NullReferenceException"></exception>
     public string RecvFile()
     {
         if (ftServerIp == null)
@@ -100,6 +120,14 @@ public abstract class HTcpClient
         }
     }
 
+    /// <summary>
+    /// 发送多个文件
+    /// </summary>
+    /// <param name="paths">文件路径列表</param>
+    /// <param name="filenames">文件名列表</param>
+    /// <returns>成功发送的文件数</returns>
+    /// <exception cref="NullReferenceException"></exception>
+    /// <exception cref="ArgumentException"></exception>
     public int SendFiles(List<string> paths, List<string> filenames)
     {
         if (ftServerIp == null)
@@ -149,6 +177,11 @@ public abstract class HTcpClient
         return countSent;
     }
 
+    /// <summary>
+    /// 接收多个文件
+    /// </summary>
+    /// <returns>下载的文件路径列表</returns>
+    /// <exception cref="NullReferenceException"></exception>
     public List<string> RecvFiles()
     {
         if (ftServerIp == null)

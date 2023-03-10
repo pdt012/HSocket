@@ -22,6 +22,9 @@ public class HSocket : Socket
         : base(safeSocketHandle)
     { }
 
+    /// <summary>
+    /// 是否为有效的套接字
+    /// </summary>
     public bool IsValid()
     {
         return !SafeHandle.IsInvalid;
@@ -45,11 +48,25 @@ public class HTcpSocket : HSocket
         return new HTcpSocket(sock.SafeHandle);
     }
 
+    /// <summary>
+    /// 发送一个数据包
+    /// </summary>
+    /// <param name="msg">发送的报文</param>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
     public void SendMsg(Message msg)
     {
         Send(msg.ToBytes());
     }
 
+    /// <summary>
+    /// 尝试接收一个数据包
+    /// </summary>
+    /// <returns>收到的报文</returns>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
+    /// <exception cref="EmptyMessageError"></exception>
+    /// <exception cref="MessageHeaderError"></exception>
     public Message RecvMsg()
     {
         byte[] headerBuffer = new byte[Header.HEADER_LENGTH];
@@ -67,6 +84,15 @@ public class HTcpSocket : HSocket
         return new Message(header, data.ToArray());
     }
 
+    /// <summary>
+    /// 发送一个文件
+    /// </summary>
+    /// <param name="file">可读的文件对象</param>
+    /// <param name="filename">文件名</param>
+    /// <exception cref="EncoderFallbackException"></exception>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
+    /// <exception cref="IOException"></exception>
     public void SendFile(FileStream file, string filename)
     {
         // get file size
@@ -86,6 +112,14 @@ public class HTcpSocket : HSocket
         }
     }
 
+    /// <summary>
+    /// 尝试接收一个文件
+    /// </summary>
+    /// <returns>成功接收的文件路径，若接收失败则返回空字符串</returns>
+    /// <exception cref="EncoderFallbackException"></exception>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
+    /// <exception cref="IOException"></exception>
     public string RecvFile()
     {
         // filename
@@ -139,12 +173,28 @@ public class HUdpSocket : HSocket
         : base(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
     { }
 
+    /// <summary>
+    /// 发送一个数据包
+    /// </summary>
+    /// <param name="msg">发送的报文</param>
+    /// <param name="addr">目标地址</param>
+    /// <returns>数据是否全部发送</returns>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
     public bool SendMsg(Message msg, EndPoint addr)
     {
         byte[] data = msg.ToBytes();
         return SendTo(data, addr) == data.Length;
     }
 
+    /// <summary>
+    /// 尝试接收一个数据包
+    /// </summary>
+    /// <param name="senderAddr"></param>
+    /// <exception cref="EmptyMessageError"></exception>
+    /// <exception cref="MessageHeaderError"></exception>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
     public Message RecvMsg(ref IPEndPoint senderAddr)
     {
         try
