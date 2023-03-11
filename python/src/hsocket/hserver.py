@@ -108,6 +108,9 @@ class __HTcpServer:
             paths (list[str]): 文件路径列表
             filenames (list[str]): 文件名列表
 
+        Raises:
+            ValueError: 文件路径与文件名列表长度不同时抛出
+
         Returns:
             int: 成功发送的文件数
         """
@@ -120,7 +123,7 @@ class __HTcpServer:
             try:
                 c_socket.sendFiles(paths, filenames, succeed_path_list)
             except ValueError:
-                return []
+                raise
             except OSError:
                 pass
         return succeed_path_list

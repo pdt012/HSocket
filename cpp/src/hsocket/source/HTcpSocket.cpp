@@ -141,7 +141,7 @@ void HTcpSocket::sendFiles(std::vector<std::string>& pathList, std::vector<std::
 		}
 		catch (SocketError e) {
 			fin.close();
-			throw e;
+			throw;
 		}
 	}
 }

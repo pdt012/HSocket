@@ -74,7 +74,7 @@ std::vector<std::string> HTcpClient::sendfiles(std::vector<std::string> &paths, 
 		ftSocket.sendFiles(paths, filenames, succeedPathList);
 	}
 	catch (std::invalid_argument e) {
-		return {};
+		throw;
 	}
 	catch (SocketError e) {	}
 	ftSocket.close();

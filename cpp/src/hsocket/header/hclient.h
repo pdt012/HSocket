@@ -58,6 +58,7 @@ public:
 	 * @brief 发送多个文件
 	 * @param paths 文件路径列表
 	 * @param filenames 文件名列表
+	 * @throw std::invalid_argument 文件路径与文件名列表长度不同时抛出
 	 * @return 成功发送的文件数
 	*/
 	std::vector<std::string> sendfiles(std::vector<std::string> &paths, std::vector<std::string> &filenames);

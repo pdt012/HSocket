@@ -88,7 +88,7 @@ class _HTcpClient:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
                 ft_socket.sendFiles(paths, filenames, succeed_path_list)
             except ValueError:
-                return []
+                raise
             except OSError:
                 pass
         return succeed_path_list
