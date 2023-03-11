@@ -6,9 +6,9 @@ typedef SOCKET SOCKET;
 
 class SocketConfig {
 public:
-	static inline int RECV_BUFFER_SIZE = 1024;
-	static inline int FILE_BUFFER_SIZE = 2048;
-	static inline std::string DEFAULT_DOWNLOAD_PATH = "download/";
+	static inline int recvBufferSize = 1024;
+	static inline int fileBufferSize = 2048;
+	static inline std::string downloadDirectory = "download/";
 };
 
 class HTcpSocket : public HSocket

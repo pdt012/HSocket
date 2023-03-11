@@ -24,7 +24,7 @@ Message HTcpSocket::recvMsg()
 	memcpy_s(&header, HEADER_LENGTH, headerdata.c_str(), HEADER_LENGTH);
 	int size = header.length;
 	while (data.size() < size) {  // 未接收完
-		int recvSize = min(size - data.size(), SocketConfig::RECV_BUFFER_SIZE);
+		int recvSize = min(size - data.size(), SocketConfig::recvBufferSize);
 		std::string recvData = recv(recvSize);
 		data += recvData;
 	}
@@ -48,9 +48,9 @@ void HTcpSocket::sendFile(std::ifstream &file, const std::string &filename)
 	memcpy_s(filesize_b, 4, &filesize, 4);
 	this->sendall(std::string(filesize_b, 4));  // filesize
 	// file content
-	char *buf = new char[SocketConfig::FILE_BUFFER_SIZE];
+	char *buf = new char[SocketConfig::fileBufferSize];
 	while (!file.eof()) {
-		file.read(buf, SocketConfig::FILE_BUFFER_SIZE);
+		file.read(buf, SocketConfig::fileBufferSize);
 		int readSize = file.gcount();
 		this->sendall(std::string(buf, readSize));
 	}
@@ -80,9 +80,9 @@ std::string HTcpSocket::recvFile()
 	memcpy_s(&filesize, 4, filesize_b.c_str(), 4);
 	// file content
 	if (!filename.empty() && filesize > 0) {
-		if (!fileutil::exists(SocketConfig::DEFAULT_DOWNLOAD_PATH.c_str()))
-			fileutil::mkdir(SocketConfig::DEFAULT_DOWNLOAD_PATH.c_str());
-		std::string downPath = pathutil::join(SocketConfig::DEFAULT_DOWNLOAD_PATH, filename);
+		if (!fileutil::exists(SocketConfig::downloadDirectory.c_str()))
+			fileutil::mkdir(SocketConfig::downloadDirectory.c_str());
+		std::string downPath = pathutil::join(SocketConfig::downloadDirectory, filename);
 		int totalRecvSize = 0;  // 收到的字节数
 #ifdef USE_UNICODE_FILEPATHS
 		std::wstring uniDownPath;
@@ -92,7 +92,7 @@ std::string HTcpSocket::recvFile()
 		std::fstream fp(downPath, std::ios::binary | std::ios::out);
 #endif
 		while (totalRecvSize < filesize) {
-			int recvSize = min(filesize - totalRecvSize, SocketConfig::RECV_BUFFER_SIZE);
+			int recvSize = min(filesize - totalRecvSize, SocketConfig::recvBufferSize);
 			std::string data = recv(recvSize);
 			fout.write(data.c_str(), data.size());
 			totalRecvSize += data.size();

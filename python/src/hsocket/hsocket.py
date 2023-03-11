@@ -6,9 +6,9 @@ from .message import *
 
 
 class SocketConfig:
-    RECV_BUFFER_SIZE = 1024
-    FILE_BUFFER_SIZE = 2048
-    DEFAULT_DOWNLOAD_PATH = "download/"
+    recvBufferSize = 1024
+    fileBufferSize = 2048
+    downloadDirectory = "download/"
 
 
 class _HSocket(socket.socket):
@@ -60,7 +60,7 @@ class HTcpSocket(_HSocket):
         header = Header.fromBytes(self.recv(Header.HEADER_LENGTH))
         size = header.length
         while len(data) < size:  # 未接收完
-            recv_size = min(size - len(data), SocketConfig.RECV_BUFFER_SIZE)
+            recv_size = min(size - len(data), SocketConfig.recvBufferSize)
             recv_data = self.recv(recv_size)
             data += recv_data
         if data:
@@ -89,7 +89,7 @@ class HTcpSocket(_HSocket):
         self.sendall(filesize.to_bytes(4, 'little', signed=False))  # filesize
         # file content
         while True:
-            data = file.read(SocketConfig.FILE_BUFFER_SIZE)
+            data = file.read(SocketConfig.fileBufferSize)
             if not data:
                 break
             self.sendall(data)
@@ -121,13 +121,13 @@ class HTcpSocket(_HSocket):
         filesize = int.from_bytes(filesize_b, 'little', signed=False)
         # file content
         if filename and filesize > 0:
-            if not os.path.exists(SocketConfig.DEFAULT_DOWNLOAD_PATH):
-                os.makedirs(SocketConfig.DEFAULT_DOWNLOAD_PATH)
-            down_path = os.path.join(SocketConfig.DEFAULT_DOWNLOAD_PATH, filename)
+            if not os.path.exists(SocketConfig.downloadDirectory):
+                os.makedirs(SocketConfig.downloadDirectory)
+            down_path = os.path.join(SocketConfig.downloadDirectory, filename)
             total_recv_size = 0
             with open(down_path, 'wb') as fp:
                 while total_recv_size < filesize:
-                    recv_size = min(filesize - total_recv_size, SocketConfig.RECV_BUFFER_SIZE)
+                    recv_size = min(filesize - total_recv_size, SocketConfig.recvBufferSize)
                     data = self.recv(recv_size)
                     fp.write(data)
                     total_recv_size += len(data)
