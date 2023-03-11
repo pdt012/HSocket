@@ -96,7 +96,7 @@ public class HTcpSocket : HSocket
     public void SendFile(FileStream file, string filename)
     {
         // get file size
-        long filesize = file.Length;
+        int filesize = (int)file.Length;
         // file header
         Send(Encoding.UTF8.GetBytes(filename));  // filename
         Send(new byte[1] { 0 });  // name end
