@@ -136,61 +136,23 @@ public abstract class HTcpClient
     /// <returns>成功发送的文件数</returns>
     /// <exception cref="NullReferenceException"></exception>
     /// <exception cref="ArgumentException"></exception>
-    public int SendFiles(List<string> paths, List<string> filenames)
+    public List<string> SendFiles(List<string> paths, List<string> filenames)
     {
         if (ftServerIp == null)
             throw new NullReferenceException("'ftServerIp' is null.");
-        if (paths.Count != filenames.Count)
-            throw new ArgumentException("Length of 'paths' & 'filenames' is not matched.");
         if (!GetFTTransferPort())
-            return 0;
-        // send files header
-        int countSent = 0;
+            return new();
+        // send
+        List<string> succeedPathList = new();
         using HTcpSocket ftSocket = new();
         try
         {
             ftSocket.Connect(new IPEndPoint(ftServerIp, ftServerPort));
-            JsonObject json = new()
-            {
-                { "file_count", paths.Count }
-            };
-            Message filesHeaderMsg = Message.JsonMsg((ushort)BuiltInOpCode.FT_SEND_FILES_HEADER, json);
-            ftSocket.SendMsg(filesHeaderMsg);
+            ftSocket.SendFiles(paths, filenames, ref succeedPathList);
         }
-        catch
-        {
-            return countSent;
-        }
-        // send files
-        for (int i = 0; i < paths.Count; i++)
-        {
-            string path = paths[i];
-            string filename = filenames[i];
-            FileStream? fin = null;
-            try
-            {
-                try
-                {
-                    fin = File.OpenRead(path);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                    continue;
-                }
-                ftSocket.SendFile(fin, filename);
-                countSent++;
-            }
-            catch
-            {
-                break;
-            }
-            finally
-            {
-                fin?.Close();
-            }
-        }
-        return countSent;
+        catch (ArgumentException) { throw; }
+        catch { }
+        return succeedPathList;
     }
 
     /// <summary>
@@ -210,22 +172,7 @@ public abstract class HTcpClient
         {
             using HTcpSocket ftSocket = new();
             ftSocket.Connect(new IPEndPoint(ftServerIp, ftServerPort));
-            Message filesHeaderMsg = ftSocket.RecvMsg();
-            int fileCount = filesHeaderMsg.GetInt("file_count") ?? 0;
-            // recv files
-            for (int i = 0; i < fileCount; i++)
-            {
-                try
-                {
-                    string downloadPath = ftSocket.RecvFile();
-                    if (downloadPath.Length > 0)
-                        downloadPathList.Add(downloadPath);
-                }
-                catch
-                {
-                    break;
-                }
-            }
+            ftSocket.RecvFiles(ref downloadPathList);
         }
         catch { }
         return downloadPathList;

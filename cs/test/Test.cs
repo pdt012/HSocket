@@ -50,8 +50,13 @@ try
                     client.SendMsg(Message.HeaderOnlyMsg(110));
                     List<string> pathlist = new() { "testfile/test1.txt", "testfile/test2.txt" };
                     List<string> namelist = new() { "test1_by_cs_client.txt", "test2_by_cs_client.txt" };
-                    int count = client.SendFiles(pathlist, namelist);
-                    Console.WriteLine($"send files ({count})");
+                    List<string> succeedlist = client.SendFiles(pathlist, namelist);
+                    Console.Write("send files [");
+                    foreach (string path in succeedlist)
+                    {
+                        Console.Write($"'{path}', ");
+                    }
+                    Console.WriteLine("]");
                     break;
                 }
             case 111:
