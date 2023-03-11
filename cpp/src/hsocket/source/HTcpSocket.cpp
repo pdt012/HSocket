@@ -119,7 +119,7 @@ void HTcpSocket::sendFiles(std::vector<std::string>& pathList, std::vector<std::
 {
 	succeedPathListOut.clear();
 	if (pathList.size() != filenameList.size())
-		throw std::invalid_argument("Length of 'path_list' & 'filename_list' is not matched.");
+		throw std::invalid_argument("Length of 'pathList' & 'filenameList' is not matched.");
 	// files header
 	int fileCount = pathList.size();
 	char fileCount_b[4];
