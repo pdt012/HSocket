@@ -35,7 +35,7 @@ try
         {
             case 100:
                 client.SendMsg(Message.HeaderOnlyMsg(100));
-                client.SendFile("testfile/test1.txt", "test1_by_cpp_client.txt");
+                client.SendFile("testfile/test1.txt", "test1_by_cs_client.txt");
                 Console.WriteLine("send file");
                 break;
             case 101:
@@ -49,7 +49,7 @@ try
                 {
                     client.SendMsg(Message.HeaderOnlyMsg(110));
                     List<string> pathlist = new() { "testfile/test1.txt", "testfile/test2.txt" };
-                    List<string> namelist = new() { "test1_by_cpp_client.txt", "test2_by_cpp_client.txt" };
+                    List<string> namelist = new() { "test1_by_cs_client.txt", "test2_by_cs_client.txt" };
                     int count = client.SendFiles(pathlist, namelist);
                     Console.WriteLine($"send files ({count})");
                     break;
@@ -69,7 +69,7 @@ try
             default:
                 {
                     JsonObject json = new();
-                    string text = $"test message<{code}> send by c++ client";
+                    string text = $"test message<{code}> send by cs client";
                     json.Add("text", text);
                     Message msg = Message.JsonMsg((ushort)code, json);
                     Message? replyMsg = client.Request(msg);
