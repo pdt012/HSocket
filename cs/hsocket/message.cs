@@ -155,30 +155,63 @@ public class Message
     /// </summary>
     public ushort Opcode { get { return _opcode; } }
 
+    /// <summary>
+    /// 获取纯文本（内容不为PLAINTEXT时为null）
+    /// </summary>
     public string? Text { get { return _text; } }
 
+    /// <summary>
+    /// 获取JOSN对象（内容不为JSONOBJECT时为null）
+    /// </summary>
     public JsonObject? Json { get { return _json; } }
 
+    /// <summary>
+    /// 获取二进制内容（内容不为BINARY时为null）
+    /// </summary>
     public byte[]? Binary { get { return _binary; } }
 
+    /// <summary>
+    /// 获取int类型JOSN字段值
+    /// </summary>
+    /// <param name="key">键名</param>
+    /// <returns>键不存在时返回null</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public int? GetInt(string key)
     {
         JsonNode? node = _json?[key];
         return node?.GetValue<int>();
     }
 
+    /// <summary>
+    /// 获取float类型JOSN字段值
+    /// </summary>
+    /// <param name="key">键名</param>
+    /// <returns>键不存在时返回null</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public float? GetFloat(string key)
     {
         JsonNode? node = _json?[key];
         return node?.GetValue<float>();
     }
 
+    /// <summary>
+    /// 获取bool类型JOSN字段值
+    /// </summary>
+    /// <param name="key">键名</param>
+    /// <returns>键不存在时返回null</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public bool? GetBool(string key)
     {
         JsonNode? node = _json?[key];
         return node?.GetValue<bool>();
     }
 
+    /// <summary>
+    /// 获取string类型JOSN字段值
+    /// </summary>
+    /// <param name="key">键名</param>
+    /// <returns>键不存在时返回null</returns>
+    /// <exception cref="InvalidOperationException"></exception>
     public string? GetStr(string key)
     {
         JsonNode? node = _json?[key];

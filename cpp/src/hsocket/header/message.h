@@ -128,28 +128,52 @@ public:
 		return this->__content;
 	}
 
+	/**
+	 * @brief 获取JOSN内容
+	 * @return 内容不为JSONOBJECT时为nullptr
+	*/
 	neb::CJsonObject *json() {
 		return this->__json;
 	}
 
+	/**
+	 * @brief 获取int类型JOSN字段值
+	 * @param key 键名
+	 * @return 键不存在时返回null
+	*/
 	int getInt(const std::string &key) {
 		int value;
 		__json->Get(key, value);
 		return value;
 	}
 
+	/**
+	 * @brief 获取float类型JOSN字段值
+	 * @param key 键名
+	 * @return 键不存在时返回null
+	*/
 	float getFloat(const std::string &key) {
 		float value;
 		__json->Get(key, value);
 		return value;
 	}
 
+	/**
+	 * @brief 获取bool类型JOSN字段值
+	 * @param key 键名
+	 * @return 键不存在时返回null
+	*/
 	bool getBool(const std::string &key) {
 		bool value;
 		__json->Get(key, value);
 		return value;
 	}
 
+	/**
+	 * @brief 获取string类型JOSN字段值
+	 * @param key 键名
+	 * @return 键不存在时返回null
+	*/
 	std::string getStr(const std::string &key) {
 		std::string value;
 		__json->Get(key, value);
