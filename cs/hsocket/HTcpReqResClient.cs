@@ -12,18 +12,15 @@ public class HTcpReqResClient : HTcpClient
         try
         {
             tcpSocket.SendMsg(msg);
+            return true;
         }
-        catch (ObjectDisposedException)
-        {
-            return false;
-        }
+        catch (ObjectDisposedException) { }
         catch (SocketException)
         {
             OnDisconnected();
             Close();
-            return false;
         }
-        return true;
+        return false;
     }
 
     protected override bool GetFTTransferPort()
@@ -36,21 +33,12 @@ public class HTcpReqResClient : HTcpClient
                 ftServerPort = msg.GetInt("port") ?? 0;
                 return true;
             }
-            else
-                return false;
         }
-        catch (ObjectDisposedException)
-        {
-            return false;
-        }
-        catch (SocketException)
-        {
-            return false;
-        }
-        catch (MessageError)
-        {
-            return false;
-        }
+        catch (ObjectDisposedException) { }
+        catch (SocketException) { }
+        catch (MessageError) { }
+        catch (InvalidOperationException) { }
+        return false;
     }
 
     /// <summary>
@@ -67,11 +55,11 @@ public class HTcpReqResClient : HTcpClient
                 Message response = tcpSocket.RecvMsg();
                 return response;
             }
+            catch (ObjectDisposedException) { return null; }
             catch (SocketException) { }
             catch (MessageError) { }  // 收到空包文时断开
             OnDisconnected();
             Close();
-            return null;
         }
         return null;
     }

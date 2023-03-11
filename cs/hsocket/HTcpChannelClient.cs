@@ -67,16 +67,14 @@ public class HTcpChannelClient : HTcpClient
     {
         while (!IsClosed())
         {
+            Message msg;
             try
             {
-                Message msg = tcpSocket.RecvMsg();
-                if (msg.Opcode == (ushort)BuiltInOpCode.FT_TRANSFER_PORT)
-                {
-                    ftServerPort = msg.GetInt("port") ?? 0;
-                    mtxFTPort.ReleaseMutex();
-                    continue;
-                }
-                OnMessageReceived(msg);
+                msg = tcpSocket.RecvMsg();
+            }
+            catch (ObjectDisposedException)
+            {
+                break;
             }
             catch (SocketException e)
             {
@@ -92,6 +90,13 @@ public class HTcpChannelClient : HTcpClient
                 Close();
                 break;
             }
+            if (msg.Opcode == (ushort)BuiltInOpCode.FT_TRANSFER_PORT)
+            {
+                ftServerPort = msg.GetInt("port") ?? 0;
+                mtxFTPort.ReleaseMutex();
+                continue;
+            }
+            OnMessageReceived(msg);
         }
     }
 

@@ -78,20 +78,28 @@ public abstract class HTcpClient
             return;
         // send
         using HTcpSocket ftSocket = new();
+        FileStream? fin = null;
         try
         {
             ftSocket.Connect(new IPEndPoint(ftServerIp, ftServerPort));
-            using FileStream fin = File.OpenRead(path);
+            try
+            {
+                fin = File.OpenRead(path);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return;
+            }
             ftSocket.SendFile(fin, filename);
         }
-        catch (SocketException)
+        catch
         {
             return;
         }
-        catch (FileNotFoundException e)
+        finally
         {
-            Console.WriteLine(e.Message);
-            return;
+            fin?.Close();
         }
     }
 
@@ -114,7 +122,7 @@ public abstract class HTcpClient
             string downloadPath = ftSocket.RecvFile();
             return downloadPath;
         }
-        catch (SocketException)
+        catch
         {
             return "";
         }
@@ -149,7 +157,7 @@ public abstract class HTcpClient
             Message filesHeaderMsg = Message.JsonMsg((ushort)BuiltInOpCode.FT_SEND_FILES_HEADER, json);
             ftSocket.SendMsg(filesHeaderMsg);
         }
-        catch (SocketException)
+        catch
         {
             return countSent;
         }
@@ -158,20 +166,28 @@ public abstract class HTcpClient
         {
             string path = paths[i];
             string filename = filenames[i];
+            FileStream? fin = null;
             try
             {
-                using FileStream fin = File.OpenRead(path);
+                try
+                {
+                    fin = File.OpenRead(path);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e.Message);
+                    continue;
+                }
                 ftSocket.SendFile(fin, filename);
                 countSent++;
             }
-            catch (FileNotFoundException e)
-            {
-                Console.WriteLine(e.Message);
-                continue;
-            }
-            catch (SocketException)
+            catch
             {
                 break;
+            }
+            finally
+            {
+                fin?.Close();
             }
         }
         return countSent;
@@ -190,9 +206,9 @@ public abstract class HTcpClient
             return new List<string>();
         // recv
         List<string> downloadPathList = new();
-        using HTcpSocket ftSocket = new();
         try
         {
+            using HTcpSocket ftSocket = new();
             ftSocket.Connect(new IPEndPoint(ftServerIp, ftServerPort));
             Message filesHeaderMsg = ftSocket.RecvMsg();
             int fileCount = filesHeaderMsg.GetInt("file_count") ?? 0;
@@ -205,14 +221,13 @@ public abstract class HTcpClient
                     if (downloadPath.Length > 0)
                         downloadPathList.Add(downloadPath);
                 }
-                catch (SocketException)
+                catch
                 {
                     break;
                 }
             }
         }
-        catch (SocketException) { }
-        catch (MessageError) { }
+        catch { }
         return downloadPathList;
     }
 
