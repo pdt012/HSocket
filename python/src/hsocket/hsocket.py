@@ -151,7 +151,7 @@ class HTcpSocket(_HSocket):
         """
         succeed_path_list_out.clear()
         if len(path_list) != len(filename_list):
-            raise ValueError("length of 'path_list' & 'filename_list' is not matched.")
+            raise ValueError("Length of 'path_list' & 'filename_list' is not matched.")
         # files header
         file_count = len(path_list)
         self.sendall(file_count.to_bytes(4, 'little', signed=False))  # file count

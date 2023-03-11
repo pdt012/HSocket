@@ -80,7 +80,7 @@ class _HTcpClient:
 
     def sendfiles(self, paths: list[str], filenames: list[str]) -> list[str]:
         if not self._get_ft_transfer_port():
-            return 0
+            return []
         # send
         succeed_path_list = []
         with HTcpSocket() as ft_socket:
@@ -88,7 +88,7 @@ class _HTcpClient:
                 ft_socket.connect((self._ft_server_ip, self._ft_server_port))
                 ft_socket.sendFiles(paths, filenames, succeed_path_list)
             except ValueError:
-                return 0
+                return []
             except OSError:
                 pass
         return succeed_path_list

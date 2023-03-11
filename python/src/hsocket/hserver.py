@@ -9,7 +9,6 @@ from .message import *
 
 class BuiltInOpCode(IntEnum):
     FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
-    FT_SEND_FILES_HEADER = 62000  # 多文件传输时头部信息 {"file_count": 文件数}
 
 
 class __HTcpServer:
@@ -101,7 +100,7 @@ class __HTcpServer:
                 return ""
         return down_path
 
-    def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
+    def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> list[str]:
         """发送多个文件
 
         Args:
@@ -114,14 +113,14 @@ class __HTcpServer:
         """
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
-            return 0
+            return []
         # send
         succeed_path_list = []
         with c_socket:
             try:
                 c_socket.sendFiles(paths, filenames, succeed_path_list)
             except ValueError:
-                return 0
+                return []
             except OSError:
                 pass
         return succeed_path_list
