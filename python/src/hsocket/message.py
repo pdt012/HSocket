@@ -31,10 +31,6 @@ class ContentType(IntEnum):
     BINARY = 0x4  # 二进制串
 
 
-class MessageConfig:
-    ENCODING = "UTF-8"
-
-
 class Header:
     HEADER_LENGTH = 8
 
@@ -178,9 +174,9 @@ class Message:
             case ContentType.HEADERONLY:
                 content = b""
             case ContentType.PLAINTEXT if isinstance(self.__content, str):
-                content = self.__content.encode(MessageConfig.ENCODING)
+                content = self.__content.encode("UTF-8")
             case ContentType.JSONOBJRCT if isinstance(self.__content, str):
-                content = json.dumps(self.__json).encode(MessageConfig.ENCODING)
+                content = json.dumps(self.__json).encode("UTF-8")
             case ContentType.BINARY if isinstance(self.__content, bytes):
                 content = self.__content
             case _:
@@ -208,7 +204,7 @@ class Message:
         if header.contenttype == ContentType.BINARY:
             msg = Message.HeaderContent(header, data[Header.HEADER_LENGTH:])
         else:
-            msg = Message.HeaderContent(header, data[Header.HEADER_LENGTH:].decode(MessageConfig.ENCODING))
+            msg = Message.HeaderContent(header, data[Header.HEADER_LENGTH:].decode("UTF-8"))
         return msg
 
     def __str__(self):

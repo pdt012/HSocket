@@ -9,7 +9,6 @@ class SocketConfig:
     RECV_BUFFER_SIZE = 1024
     FILE_BUFFER_SIZE = 2048
     DEFAULT_DOWNLOAD_PATH = "download/"
-    FILENAME_ENCODING = "utf-8"
 
 
 class _HSocket(socket.socket):
@@ -65,7 +64,7 @@ class HTcpSocket(_HSocket):
             recv_data = self.recv(recv_size)
             data += recv_data
         if data:
-            return Message.HeaderContent(header, data.decode(MessageConfig.ENCODING))
+            return Message.HeaderContent(header, data.decode("UTF-8"))
         else:
             return Message.HeaderContent(header, "")
 
@@ -85,7 +84,7 @@ class HTcpSocket(_HSocket):
         filesize = file.tell()
         file.seek(0, os.SEEK_SET)
         # file header
-        self.sendall(filename.encode(SocketConfig.FILENAME_ENCODING))  # filename
+        self.sendall(filename.encode("UTF-8"))  # filename
         self.sendall(b'\0')  # name end
         self.sendall(filesize.to_bytes(4, 'little', signed=False))  # filesize
         # file content
@@ -116,7 +115,7 @@ class HTcpSocket(_HSocket):
                 filename_b += char
             else:
                 break
-        filename = filename_b.decode(SocketConfig.FILENAME_ENCODING)
+        filename = filename_b.decode("UTF-8")
         # filesize
         filesize_b = self.recv(4)
         filesize = int.from_bytes(filesize_b, 'little', signed=False)
