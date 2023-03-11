@@ -4,7 +4,8 @@
 #include "convert/convert.h"
 #include <fstream>
 
-#define USE_UNICODE_FILEPATHS
+// true表示使用的字符串都是utf8编码, 否则都是默认系统编码
+#define USING_UTF8_STRING false
 
 HTcpSocket::HTcpSocket()
 	: HSocket(PF_INET, SOCK_STREAM, IPPROTO_TCP)
@@ -42,7 +43,13 @@ void HTcpSocket::sendFile(std::ifstream &file, const std::string &filename)
 	file.clear();
 	file.seekg(0, std::ios::beg);
 	// file header
+#if USING_UTF8_STRING
 	this->sendall(filename);  // filename
+#else
+	std::string utf8Filename;
+	gconvert::ansi2utf8(filename, utf8Filename);
+	this->sendall(utf8Filename);  // filename
+#endif
 	this->sendall(std::string(1, '\0'));  //name end
 	char filesize_b[4];
 	memcpy_s(filesize_b, 4, &filesize, 4);
@@ -79,18 +86,22 @@ std::string HTcpSocket::recvFile()
 	unsigned int filesize;
 	memcpy_s(&filesize, 4, filesize_b.c_str(), 4);
 	// file content
-	if (!filename.empty() && filesize > 0) {
-		if (!fileutil::exists(SocketConfig::downloadDirectory.c_str()))
-			fileutil::mkdir(SocketConfig::downloadDirectory.c_str());
-		std::string downPath = pathutil::join(SocketConfig::downloadDirectory, filename);
-		int totalRecvSize = 0;  // 收到的字节数
-#ifdef USE_UNICODE_FILEPATHS
-		std::wstring uniDownPath;
-		gconvert::utf82uni(downPath, uniDownPath);
-		std::fstream fout(uniDownPath, std::ios::binary | std::ios::out);
+#if USING_UTF8_STRING
+	std::string ansiDownloadDirectory;
+	gconvert::utf82ansi(SocketConfig::downloadDirectory, ansiDownloadDirectory);
 #else
-		std::fstream fp(downPath, std::ios::binary | std::ios::out);
+	std::string ansiDownloadDirectory = SocketConfig::downloadDirectory;
+	std::string ansiFilename;
+	gconvert::utf82ansi(filename, ansiFilename);
 #endif
+	if (!filename.empty() && filesize > 0) {
+		if (!fileutil::exists(ansiDownloadDirectory.c_str()))
+			fileutil::mkdir(ansiDownloadDirectory.c_str());
+		std::string downloadPath = pathutil::join(ansiDownloadDirectory, ansiFilename);
+		int totalRecvSize = 0;  // 收到的字节数
+		std::fstream fout(downloadPath, std::ios::binary | std::ios::out);
+		if (fout.fail())
+			return "";
 		while (totalRecvSize < filesize) {
 			int recvSize = min(filesize - totalRecvSize, SocketConfig::recvBufferSize);
 			std::string data = recv(recvSize);
@@ -98,7 +109,7 @@ std::string HTcpSocket::recvFile()
 			totalRecvSize += data.size();
 		}
 		fout.close();
-		return downPath;
+		return downloadPath;
 	}
 	return "";
 }
