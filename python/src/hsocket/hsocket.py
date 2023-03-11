@@ -134,6 +134,60 @@ class HTcpSocket(_HSocket):
             return down_path
         else:
             return ""
+        
+    def sendFiles(self, path_list: BinaryIO, filename_list: str, succeed_path_list_out: list[str]):
+        """发送多个文件
+
+        Args:
+            filepathlist (BinaryIO): 文件路径列表
+            filenamelist (str): 文件名列表
+            succeed_path_list_out (list[str]): 返回成功发送的文件路径列表
+
+        Raises:
+            ValueError: 文件路径与文件名列表长度不同时抛出
+            TimeoutError: 阻塞模式下等待超时时抛出
+            OSError: 套接字异常或文件读取异常时抛出
+            UnicodeDecodeError: 编码错误时抛出
+        """
+        succeed_path_list_out.clear()
+        if len(path_list) != len(filename_list):
+            raise ValueError("Length of 'path_list' & 'filename_list' is not matched.")
+        # files header
+        file_count = len(path_list)
+        self.sendall(file_count.to_bytes(4, 'little', signed=False))  # file count
+        # send files
+        for i in range(len(path_list)):
+            path = path_list[i]
+            filename = filename_list[i]
+            try:
+                fin = open(path, 'rb')
+            except OSError as e:  # file error
+                print(e)
+                continue
+            with fin:
+                self.sendFile(fin, filename)
+                succeed_path_list_out.append(path)
+    
+    def recvFiles(self, download_path_list_out: list[str]):
+        """接收多个文件
+
+        Args:
+            download_path_list_out (list[str]): 返回下载的文件路径列表
+
+        Raises:
+            TimeoutError: 阻塞模式下等待超时时抛出
+            OSError: 套接字异常或文件写入异常时抛出
+            UnicodeDecodeError: 编码错误时抛出
+        """
+        download_path_list_out.clear()
+        # files header
+        file_count_b = self.recv(4)
+        file_count = int.from_bytes(file_count_b, 'little', signed=False)
+        # recv files
+        for i in range(file_count):
+            path = self.recvFile()
+            if path:
+                download_path_list_out.append(path)
 
 
 class HUdpSocket(_HSocket):

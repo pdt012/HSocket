@@ -9,7 +9,6 @@ from .message import *
 
 class BuiltInOpCode(IntEnum):
     FT_TRANSFER_PORT = 60020  # 文件传输端口 {"port": port}
-    FT_SEND_FILES_HEADER = 62000  # 多文件传输时头部信息 {"file_count": 文件数}
 
 
 class __HTcpServer:
@@ -69,6 +68,7 @@ class __HTcpServer:
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
             return
+        # send
         with c_socket:
             try:
                 fin = open(path, 'rb')
@@ -92,6 +92,7 @@ class __HTcpServer:
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
             return ""
+        # recv
         with c_socket:
             try:
                 down_path = c_socket.recvFile()
@@ -99,7 +100,7 @@ class __HTcpServer:
                 return ""
         return down_path
 
-    def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> int:
+    def sendfiles(self, conn: HTcpSocket, paths: list[str], filenames: list[str]) -> list[str]:
         """发送多个文件
 
         Args:
@@ -107,37 +108,25 @@ class __HTcpServer:
             paths (list[str]): 文件路径列表
             filenames (list[str]): 文件名列表
 
+        Raises:
+            ValueError: 文件路径与文件名列表长度不同时抛出
+
         Returns:
             int: 成功发送的文件数
         """
-        if len(paths) != len(filenames):
-            return 0
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
-            return 0
-        count_sent = 0
+            return []
+        # send
+        succeed_path_list = []
         with c_socket:
             try:
-                files_header_msg = Message.JsonMsg(BuiltInOpCode.FT_SEND_FILES_HEADER, {"file_count": len(paths)})
-                c_socket.sendMsg(files_header_msg)
+                c_socket.sendFiles(paths, filenames, succeed_path_list)
+            except ValueError:
+                raise
             except OSError:
-                return 0
-            for i in range(len(paths)):
-                path = paths[i]
-                filename = filenames[i]
-                try:
-                    fin = open(path, 'rb')
-                except OSError as e:  # file error
-                    print(e)
-                    continue
-                try:
-                    c_socket.sendFile(fin, filename)
-                    count_sent += 1
-                except OSError:
-                    return count_sent
-                finally:
-                    fin.close()
-        return count_sent
+                pass
+        return succeed_path_list
 
     def recvfiles(self, conn: HTcpSocket) -> list[str]:
         """接收多个文件
@@ -151,21 +140,14 @@ class __HTcpServer:
         c_socket = self._get_ft_transfer_conn(conn)
         if c_socket is None:
             return []
-        down_path_list = []
+        # recv
+        download_path_list = []
         with c_socket:
             try:
-                files_header_msg = c_socket.recvMsg()
-            except (OSError, MessageError):
-                return []
-            file_count = files_header_msg.get("file_count")
-            for i in range(file_count):
-                try:
-                    path = c_socket.recvFile()
-                    if path:
-                        down_path_list.append(path)
-                except OSError:
-                    break
-        return down_path_list
+                c_socket.recvFiles(download_path_list)
+            except OSError:
+                pass
+        return download_path_list
 
     def setOnMsgRecvByOpCodeCallback(self, opcode: int, callback: OnMessageReceivedCallback):
         """设置收到指定操作码报文时的回调

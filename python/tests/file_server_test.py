@@ -17,11 +17,11 @@ def onMessageReceived(conn: HTcpSocket, msg: Message):
             print(f"send file")
         case 110:  # 上传
             paths = server.recvfiles(conn)
-            print(f"recv file {paths}")
+            print(f"recv files {paths}")
         case 111:  # 下载
-            count = server.sendfiles(conn, ["testfile/test1.txt", "testfile/test2.txt"],
+            paths = server.sendfiles(conn, ["testfile/test1.txt", "testfile/test2.txt"],
                                     ["test1_by_server.txt", "test2_by_server.txt"])
-            print(f"send files ({count})")
+            print(f"send files {paths}")
         case _:
             pass
 

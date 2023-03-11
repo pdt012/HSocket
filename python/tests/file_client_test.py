@@ -27,13 +27,13 @@ if __name__ == '__main__':
                         print(f"recv file '{path}'")
                     case 110:  # 上传
                         client.sendmsg(Message.HeaderOnlyMsg(110))
-                        count = client.sendfiles(["testfile/test1.txt", "testfile/test2.txt"],
+                        paths = client.sendfiles(["testfile/test1.txt", "testfile/test2.txt"],
                                                  ["test1_by_client.txt", "test2_by_client.txt"])
-                        print(f"send files ({count})")
+                        print(f"send files {paths}")
                     case 111:  # 下载
                         client.sendmsg(Message.HeaderOnlyMsg(111))
                         paths = client.recvfiles()
-                        print(f"recv file {paths}")
+                        print(f"recv files {paths}")
                     case _:
                         pass
                 print(response)

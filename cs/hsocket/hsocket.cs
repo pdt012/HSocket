@@ -1,4 +1,5 @@
-﻿using System.Net;
+﻿using System.Linq;
+using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
@@ -163,6 +164,75 @@ public class HTcpSocket : HSocket
         else
             return "";
     }
+
+    /// <summary>
+    /// 发送多个文件
+    /// </summary>
+    /// <param name="pathList">文件路径列表</param>
+    /// <param name="filenameList">文件名列表</param>
+    /// <param name="succeedPathList">返回成功发送的文件路径列表</param>
+    /// <exception cref="ArgumentException">文件路径与文件名列表长度不同时抛出</exception>
+    /// <exception cref="EncoderFallbackException"></exception>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
+    /// <exception cref="IOException"></exception>
+    public void SendFiles(List<string> pathList, List<string> filenameList, ref List<string> succeedPathList)
+    {
+        succeedPathList.Clear();
+        if (pathList.Count != filenameList.Count)
+            throw new ArgumentException("Length of 'pathList' & 'filenameList' is not matched.");
+        // files header
+        Send(BitConverter.GetBytes(pathList.Count));  // file count
+        // send files
+        for (int i = 0; i < pathList.Count; i++)
+        {
+            string path = pathList[i];
+            string filename = filenameList[i];
+            FileStream? fin;
+            try
+            {
+                fin = File.OpenRead(path);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                continue;
+            }
+            try
+            {
+                SendFile(fin, filename);
+                succeedPathList.Add(path);
+            }
+            finally
+            {
+                fin?.Close();
+            }
+        }
+    }
+
+    /// <summary>
+    /// 接收多个文件
+    /// </summary>
+    /// <param name="downloadPathListOut">返回下载的文件路径列表</param>
+    /// <exception cref="EncoderFallbackException"></exception>
+    /// <exception cref="ObjectDisposedException"></exception>
+    /// <exception cref="SocketException"></exception>
+    /// <exception cref="IOException"></exception>
+    public void RecvFiles(ref List<string> downloadPathListOut)
+    {
+        downloadPathListOut.Clear();
+        // files header
+        byte[] fileCountBuffer = new byte[4];
+        Receive(fileCountBuffer);
+        int fileCount = BitConverter.ToInt32(fileCountBuffer);
+        // recv files
+        for (int i = 0; i < fileCount; i++)
+        {
+            string path = RecvFile();
+            if (path.Length > 0)
+                downloadPathListOut.Add(path);
+        }
+    }
 }
 
 
@@ -207,7 +277,7 @@ public class HUdpSocket : HSocket
         {
             if (e.SocketErrorCode == SocketError.ConnectionReset)  // received an ICMP unreachable
                 throw new EmptyMessageError();
-            else throw e;
+            else throw;
         }
     }
 }
