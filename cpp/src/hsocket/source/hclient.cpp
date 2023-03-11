@@ -20,7 +20,7 @@ void HTcpClient::close()
 	tcpSocket.close();
 }
 
-void HTcpClient::sendfile(std::string path, std::string filename)
+void HTcpClient::sendfile(const std::string &path, const std::string &filename)
 {
 	if (!this->getFTTransferPort())
 		return;
@@ -62,46 +62,23 @@ std::string HTcpClient::recvfile()
 	return downPath;
 }
 
-int HTcpClient::sendfiles(std::vector<std::string> paths, std::vector<std::string> filenames)
+std::vector<std::string> HTcpClient::sendfiles(std::vector<std::string> &paths, std::vector<std::string> &filenames)
 {
 	if (!this->getFTTransferPort())
-		return 0;
-	if (paths.size() != filenames.size())
-		return 0;
+		return {};
 	// send
-	int countSent = 0;
+	std::vector<std::string> succeedPathList;
 	HTcpSocket ftSocket;
 	try {
 		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
-		neb::CJsonObject json;
-		json.Add("file_count", paths.size());
-		Message filesHeaderMsg = Message::JsonMsg(BuiltInOpCode::FT_SEND_FILES_HEADER, json);
-		ftSocket.sendMsg(filesHeaderMsg);
+		ftSocket.sendFiles(paths, filenames, succeedPathList);
 	}
-	catch (SocketError e) {
-		ftSocket.close();
-		return countSent;
+	catch (std::invalid_argument e) {
+		return {};
 	}
-	for (int i = 0; i < paths.size(); i++) {
-		std::string path = paths[i];
-		std::string filename = filenames[i];
-		std::ifstream fin(path, std::ios::binary | std::ios::in);
-		if (fin.fail()) {
-			std::cout << "File not found: " << "\"" << path << "\"" << std::endl;
-			continue;
-		}
-		try {
-			ftSocket.sendFile(fin, filename);
-			countSent++;
-			fin.close();
-		}
-		catch (SocketError e) {
-			fin.close();
-			break;
-		}
-	}
+	catch (SocketError e) {	}
 	ftSocket.close();
-	return countSent;
+	return succeedPathList;
 }
 
 std::vector<std::string> HTcpClient::recvfiles()
@@ -109,27 +86,16 @@ std::vector<std::string> HTcpClient::recvfiles()
 	if (!this->getFTTransferPort())
 		return std::vector<std::string>();
 	// recv
-	std::vector<std::string> downPathList;
+	std::vector<std::string> downloadPathList;
 	HTcpSocket ftSocket;
 	try {
 		ftSocket.connect(ftServerIp.c_str(), ftServerPort);
-		Message filesHeaderMsg = ftSocket.recvMsg();
-		int fileCount = filesHeaderMsg.getInt("file_count");
-		for (int i = 0; i < fileCount; i++) {
-			try {
-				std::string path = ftSocket.recvFile();
-				if (!path.empty())
-					downPathList.push_back(path);
-			}
-			catch (SocketError e) {
-				break;
-			}
-		}
+		ftSocket.recvFiles(downloadPathList);
 	}
 	catch (SocketError e) {}
 	catch (MessageError e) {}
 	ftSocket.close();
-	return downPathList;
+	return downloadPathList;
 }
 
 

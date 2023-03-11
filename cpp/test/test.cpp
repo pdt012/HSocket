@@ -41,19 +41,23 @@ int main()
 			case 101: {
 				client.sendmsg(Message::HeaderOnlyMsg(101));
 				std::string path = client.recvfile();
-				std::cout << "recv file" << "'" << path << "'" << std::endl; }
+				std::cout << "recv file " << "'" << path << "'" << std::endl; }
 				break;
 			case 110: {
 				client.sendmsg(Message::HeaderOnlyMsg(110));
 				std::vector<std::string> pathlist = { "testfile/test1.txt", "testfile/test2.txt" };
 				std::vector<std::string> namelist = { "test1_by_cpp_client.txt", "test2_by_cpp_client.txt" };
-				int count = client.sendfiles(pathlist, namelist);
-				std::cout << "send files" << "(" << count << ")" << std::endl; }
-					break;
+				std::vector<std::string> succeedlist = client.sendfiles(pathlist, namelist);
+				std::cout << "send files " << "[";
+				for (std::string path : succeedlist) {
+					std::cout << "'" << path << "', ";
+				}
+				std::cout << "]" << std::endl; }
+				break;
 			case 111: {
 				client.sendmsg(Message::HeaderOnlyMsg(111));
 				std::vector<std::string> paths = client.recvfiles();
-				std::cout << "recv files" << "[";
+				std::cout << "recv files " << "[";
 				for (std::string path : paths) {
 					std::cout << "'" << path << "', ";
 				}

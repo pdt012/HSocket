@@ -3,6 +3,7 @@
 #include "HTcpSocket.h"
 #include "convert/convert.h"
 #include <fstream>
+#include <iostream>
 
 // true表示使用的字符串都是utf8编码, 否则都是默认系统编码
 #define USING_UTF8_STRING false
@@ -83,7 +84,7 @@ std::string HTcpSocket::recvFile()
 	}
 	// filesize
 	std::string filesize_b = this->recv(4);
-	unsigned int filesize;
+	int filesize;
 	memcpy_s(&filesize, 4, filesize_b.c_str(), 4);
 	// file content
 #if USING_UTF8_STRING
@@ -112,4 +113,50 @@ std::string HTcpSocket::recvFile()
 		return downloadPath;
 	}
 	return "";
+}
+
+void HTcpSocket::sendFiles(std::vector<std::string>& pathList, std::vector<std::string>& filenameList, std::vector<std::string>& succeedPathListOut)
+{
+	succeedPathListOut.clear();
+	if (pathList.size() != filenameList.size())
+		throw std::invalid_argument("Length of 'path_list' & 'filename_list' is not matched.");
+	// files header
+	int fileCount = pathList.size();
+	char fileCount_b[4];
+	memcpy_s(fileCount_b, 4, &fileCount, 4);
+	this->sendall(std::string(fileCount_b, 4));  // file count
+	// send files
+	for (int i = 0; i < pathList.size(); i++) {
+		std::string path = pathList[i];
+		std::string filename = filenameList[i];
+		std::ifstream fin(path, std::ios::binary | std::ios::in);
+		if (fin.fail()) {
+			std::cout << "File not found: " << "\"" << path << "\"" << std::endl;
+			continue;
+		}
+		try {
+			this->sendFile(fin, filename);
+			succeedPathListOut.push_back(path);
+			fin.close();
+		}
+		catch (SocketError e) {
+			fin.close();
+			throw e;
+		}
+	}
+}
+
+void HTcpSocket::recvFiles(std::vector<std::string>& downloadPathListOut)
+{
+	downloadPathListOut.clear();
+	// files header
+	std::string fileCount_b = this->recv(4);
+	int fileCount;
+	memcpy_s(&fileCount, 4, fileCount_b.c_str(), 4);
+	// recv files
+	for (int i = 0; i < fileCount; i++) {
+		std::string path = this->recvFile();
+		if (!path.empty())
+			downloadPathListOut.push_back(path);
+	}
 }

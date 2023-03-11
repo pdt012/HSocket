@@ -46,7 +46,7 @@ public:
 	 * @param path 文件路径
 	 * @param filename 文件名
 	*/
-	void sendfile(std::string path, std::string filename);
+	void sendfile(const std::string &path, const std::string &filename);
 
 	/**
 	 * @brief 接收一个文件
@@ -60,7 +60,7 @@ public:
 	 * @param filenames 文件名列表
 	 * @return 成功发送的文件数
 	*/
-	int sendfiles(std::vector<std::string> paths, std::vector<std::string> filenames);
+	std::vector<std::string> sendfiles(std::vector<std::string> &paths, std::vector<std::string> &filenames);
 
 	/**
 	 * @brief 接收多个文件
