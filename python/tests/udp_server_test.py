@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+
 sys.path.append("..")
 from src.hsocket.hserver import HUdpServer
 from src.hsocket.hsocket import HUdpSocket, Message

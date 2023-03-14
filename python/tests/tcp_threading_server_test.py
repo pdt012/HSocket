@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+
 sys.path.append("..")
 from src.hsocket.hserver import HTcpThreadingServer
 from src.hsocket.hsocket import HTcpSocket, Message
@@ -21,6 +22,7 @@ def onRecv991(conn: HTcpSocket, msg: Message) -> bool:
         sleep(2)
         print("新的线程中主动断开连接")
         server.closeconn(conn)
+
     th = Thread(target=disconnect_conn)
     th.start()
     return True
@@ -43,7 +45,7 @@ def onMessageReceived(conn: HTcpSocket, msg: Message):
 
 def onDisconnected(conn: HTcpSocket, addr):
     print("onDisconnected")
-        
+
 
 if __name__ == '__main__':
     server = HTcpThreadingServer(("127.0.0.1", 40000))

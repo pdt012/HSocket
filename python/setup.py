@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 from setuptools import setup, find_packages
 
-
 NAME = "hsocket"
 VERSION = "1.0.0"
 DESCRIPTION = "hsocket for python"
 AUTHOR = "pdt012"
 AUTHOR_EMAIL = "jxh0615@163.com"
 URL = "https://github.com/pdt012/HSocket"
-
 
 setup(
     name=NAME,

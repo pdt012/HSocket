@@ -134,7 +134,7 @@ class HTcpSocket(_HSocket):
             return down_path
         else:
             return ""
-        
+
     def sendFiles(self, path_list: BinaryIO, filename_list: str, succeed_path_list_out: list[str]):
         """发送多个文件
 
@@ -167,7 +167,7 @@ class HTcpSocket(_HSocket):
             with fin:
                 self.sendFile(fin, filename)
                 succeed_path_list_out.append(path)
-    
+
     def recvFiles(self, download_path_list_out: list[str]):
         """接收多个文件
 

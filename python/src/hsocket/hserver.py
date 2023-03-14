@@ -292,7 +292,7 @@ class HTcpSelectorServer(__HTcpServer):
                 # 主动关闭连接后会进入以下代码段
                 self.remove(conn)
                 print("connection closed (write): {}".format(addr))
-        
+
         def remove(self, conn: HTcpSocket):
             self.selector.unregister(conn)
             del self.msgs[conn]

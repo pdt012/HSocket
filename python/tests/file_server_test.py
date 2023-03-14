@@ -20,7 +20,7 @@ def onMessageReceived(conn: HTcpSocket, msg: Message):
             print(f"recv files {paths}")
         case 111:  # 下载
             paths = server.sendfiles(conn, ["testfile/test1.txt", "testfile/test2.txt"],
-                                    ["test1_by_server.txt", "test2_by_server.txt"])
+                                     ["test1_by_server.txt", "test2_by_server.txt"])
             print(f"send files {paths}")
         case _:
             pass

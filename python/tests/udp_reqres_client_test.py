@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 import sys
+
 sys.path.append("..")
 from src.hsocket.hclient import HUdpReqResClient
 from src.hsocket.hsocket import Message
 from traceback import print_exc
-
 
 if __name__ == '__main__':
     client = HUdpReqResClient(("127.0.0.1", 40000))
@@ -22,4 +22,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(print_exc())
     input("press enter to exit")
-

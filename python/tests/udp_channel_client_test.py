@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+
 sys.path.append("..")
 from src.hsocket.hclient import HUdpChannelClient
 from src.hsocket.hsocket import Message
@@ -26,4 +27,3 @@ if __name__ == '__main__':
     except Exception as e:
         print(print_exc())
     input("press enter to exit")
-
