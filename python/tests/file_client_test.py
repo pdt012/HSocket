@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 import sys
+
 sys.path.append("..")
-from src.hsocket.hclient import HTcpReqResClient
+from src.hsocket.hclient import _HTcpClient, HTcpReqResClient
 from src.hsocket.hsocket import Message
 from traceback import print_exc
 
 
-if __name__ == '__main__':
-    client = HTcpReqResClient()
+def file_test(client: _HTcpClient):
     client.connect(("127.0.0.1", 40000))
     print("start")
     try:
@@ -15,7 +15,6 @@ if __name__ == '__main__':
             code = input(">>>")
             if code.isdigit():
                 code = int(code)
-                response = None
                 match code:
                     case 100:  # 上传
                         client.sendmsg(Message.HeaderOnlyMsg(100))
@@ -36,10 +35,13 @@ if __name__ == '__main__':
                         print(f"recv files {paths}")
                     case _:
                         pass
-                print(response)
             else:
                 break
     except Exception as e:
         print(print_exc())
-    input("press enter to exit")
 
+
+if __name__ == '__main__':
+    reqres_client = HTcpReqResClient()
+    file_test(reqres_client)
+    input("press enter to exit")
