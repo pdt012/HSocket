@@ -154,7 +154,9 @@ class HTcpChannelClient(_HTcpClient):
         self.__ft_timeout = sec
 
     def _get_ft_transfer_port(self) -> bool:
+        self.__con_ft_port.acquire()
         success = self.__con_ft_port.wait(self.__ft_timeout)  # wait for an FT_TRANSFER_PORT reply
+        self.__con_ft_port.release()
         return success
 
     def __message_handle(self):
@@ -176,7 +178,9 @@ class HTcpChannelClient(_HTcpClient):
             else:
                 if msg.opcode() == BuiltInOpCode.FT_TRANSFER_PORT:
                     self._ft_server_port = msg.get("port")
+                    self.__con_ft_port.acquire()
                     self.__con_ft_port.notify()
+                    self.__con_ft_port.release()
                     continue
                 self._onMessageReceived(msg)
 
