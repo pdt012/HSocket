@@ -42,7 +42,7 @@ int main()
 				client.sendmsg(Message::HeaderOnlyMsg(101));
 				std::string path = client.recvfile();
 				std::cout << "recv file " << "'" << path << "'" << std::endl; }
-				break;
+					break;
 			case 110: {
 				client.sendmsg(Message::HeaderOnlyMsg(110));
 				std::vector<std::string> pathlist = { "testfile/test1.txt", "testfile/test2.txt" };
@@ -53,7 +53,7 @@ int main()
 					std::cout << "'" << path << "', ";
 				}
 				std::cout << "]" << std::endl; }
-				break;
+					break;
 			case 111: {
 				client.sendmsg(Message::HeaderOnlyMsg(111));
 				std::vector<std::string> paths = client.recvfiles();
@@ -62,7 +62,7 @@ int main()
 					std::cout << "'" << path << "', ";
 				}
 				std::cout << "]" << std::endl; }
-				break;
+					break;
 			default: {
 				neb::CJsonObject json;
 				std::stringstream sstream;
@@ -73,7 +73,7 @@ int main()
 				if (replyMsg.has_value()) {
 					std::cout << replyMsg->toString() << std::endl;
 				}}
-				  break;
+				   break;
 			}
 		}
 	}
